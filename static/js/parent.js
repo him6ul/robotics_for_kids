@@ -91,6 +91,7 @@ async function overview(body) {
         <p class="muted" style="margin-top:0">${s.actual_pct}% of missions done; the plan expects ${s.expected_pct}% by today. Planned finish ${s.planned_finish}${s.projected_finish ? ` · projected finish at current pace <b>${s.projected_finish}</b>` : ""}.</p>
         <div class="row"><span class="faint" style="width:70px">Actual</span><div class="progress" style="flex:1"><i style="width:${s.actual_pct}%"></i></div></div>
         <div class="row" style="margin-top:6px"><span class="faint" style="width:70px">Plan</span><div class="progress" style="flex:1"><i style="width:${s.expected_pct}%;background:var(--muted)"></i></div></div>
+        ${badgeBar(r.badges)}
         <h3 style="margin-top:18px">Learner profile: ${st.persona.emoji} ${esc(st.persona.name)}</h3><p class="muted">${esc(st.persona.desc)}</p></div>
       <div class="card"><h3>Top coaching notes</h3>${r.guide.parent.slice(0, 4).map(note).join("") || `<p class="muted">Nothing needs your attention right now. 👍</p>`}
         <p><a href="#/parent/guide">All notes →</a></p></div>
@@ -102,6 +103,17 @@ async function overview(body) {
     data: { labels: a.daily.map((d) => d.day.slice(5)), datasets: [{ label: "Active minutes", data: a.daily.map((d) => d.minutes), backgroundColor: col[0], borderRadius: 4, maxBarThickness: 18 }] },
     options: baseOpts(grid, { plugins: { legend: { display: false } } }),
   });
+}
+
+function badgeBar(badges) {
+  const got = badges.filter((b) => b.earned_at).length, total = badges.length;
+  const cats = ["Quest milestones", "Bosses", "Remixes", "Side quests", "Skills & habits"].map((c) => {
+    const items = badges.filter((b) => b.category === c);
+    return `${esc(c)} ${items.filter((b) => b.earned_at).length}/${items.length}`;
+  }).join(" · ");
+  return `<h3 style="margin-top:18px">Badges collected</h3>
+    <div class="row"><div class="progress" style="flex:1" title="${Math.round(got / total * 100)}% of all badges"><i style="width:${total ? got / total * 100 : 0}%"></i></div>
+    <b class="small">${got}/${total}</b></div><p class="faint small" style="margin:.4em 0 0">${cats}</p>`;
 }
 
 function note(n) {

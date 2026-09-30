@@ -73,6 +73,9 @@ async def metrics_mw(request: Request, call_next):
         obs.record("http.status_5xx")
         return JSONResponse({"detail": "Something went wrong on the server. It has been logged."}, status_code=500)
     ms = (time.perf_counter() - t0) * 1000
+    if route.startswith("/static/"):
+        # always revalidate (cheap, via ETag) so updates show up without a hard refresh
+        response.headers["Cache-Control"] = "no-cache"
     if route.startswith("/api/"):
         parts = ["{id}" if p.isdigit() else p for p in route.split("/")]
         key = f"http.{request.method} {'/'.join(parts[:6])}"
