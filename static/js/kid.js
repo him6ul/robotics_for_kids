@@ -203,7 +203,13 @@ export async function viewMap(app) {
   setContext("_home", "map");
   const s = await refreshState();
   const side = s.guide.kid.filter((r) => r.kind === "practice");
+  const built = s.projects.filter((p) => p.complete && p.boss_done && p.remixed).length;
   app.innerHTML = `<h1>Quest map</h1><p class="muted">Twelve robots over six weeks. Beat a robot's boss and build a remix to unlock the next one. ✓ missions done · 👾 boss beaten · 🎛️ remixed</p>
+    <div class="card" style="margin-bottom:16px"><div class="grid g2" style="gap:18px">
+      <div>${badgeProgress(s.badges)}</div>
+      <div><div class="row"><span class="muted small">Robots fully finished</span><span class="spacer"></span><b class="small">${built}/${s.projects.length}</b></div>
+        <div class="progress" style="margin-top:5px"><i style="width:${s.projects.length ? built / s.projects.length * 100 : 0}%"></i></div>
+        <p class="faint small" style="margin:.5em 0 0">Missions, boss and remix all done.</p></div></div></div>
     ${side.length ? `<div class="card" style="margin-bottom:16px"><h3>Recommended side quests</h3><div class="row">${side.map((r) =>
       `<a class="btn small" href="#/practice/${r.action.id}">${esc(r.title.replace("Side quest: ", ""))}</a>`).join("")}</div></div>` : ""}
     ${questMap(s)}`;
