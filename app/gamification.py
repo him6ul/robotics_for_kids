@@ -84,6 +84,21 @@ BADGES = {
 }
 
 
+# one badge per boss, named after it (e.g. "The Slalom — conquered")
+from .curriculum import PROJECTS as _PROJECTS  # noqa: E402
+
+BOSS_TITLES = {
+    "hello_robot": "Slalom Champion", "robo_artist": "Star Maker", "bat_bot": "Corridor Ace", "robo_vac": "Spotless",
+    "line_tracker": "Gap Jumper", "race_track": "Monaco Winner", "precision_pilot": "Rally Navigator",
+    "delivery_bot": "Master Courier", "robot_arm": "Tower Builder", "warehouse_bot": "Rush-Hour Sorter",
+    "maze_master": "Maze Speedrunner", "capstone": "Rescue Hero",
+}
+for _p in _PROJECTS:
+    if _p.get("boss"):
+        BADGES[f"boss_{_p['id']}"] = (_p["emoji"], BOSS_TITLES.get(_p["id"], _p["boss"]["title"]),
+                                      f"Beat the {_p['title']} boss: {_p['boss']['title']}")
+
+
 def badge_list(learner_id):
     earned = {r["badge_id"]: r["earned_at"] for r in db.q("SELECT * FROM badges WHERE learner_id=?", (learner_id,))}
     return [{"id": k, "emoji": v[0], "name": v[1], "desc": v[2], "earned_at": earned.get(k)} for k, v in BADGES.items()]
@@ -148,6 +163,9 @@ def evaluate_badges(learner_id, projects):
     if PRACTICE and all(("_practice", pr["id"]) in done for pr in PRACTICE):
         earned.add("practice_pro")
     bosses = sum(1 for k in done if k[1] == "boss")
+    for (pid, sid) in done:
+        if sid == "boss" and f"boss_{pid}" in BADGES:
+            earned.add(f"boss_{pid}")
     if bosses >= 1:
         earned.add("boss_1")
     if bosses >= 5:
