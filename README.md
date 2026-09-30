@@ -71,7 +71,8 @@ Every project follows the same loop:
 6. **Reflection**: he rates how fun and how hard it was, which feeds the guide.
 
 Around the projects:
-- **Side quests** (~40): small single-concept challenges the guide recommends when a skill is weak.
+- **Side quests** (42, 6–8 per week): small single-concept challenges. They're required: all of a week's side quests
+  (any order) must be done before the next week unlocks. The guide also recommends specific ones when a skill is weak.
 - **Playground**: free coding in any unlocked arena.
 - **Drive mode**: keyboard teleop with live sensor readouts, so he can *feel* differential drive before programming it.
 - **Arena Builder**: he draws walls, tape, zones, gems, blocks and lights, sets noise, GPS or a gripper, and then

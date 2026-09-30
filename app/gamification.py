@@ -74,12 +74,12 @@ BADGES = {
     "boss_5": ("🐲", "Boss Crusher", "Beat 5 boss challenges"),
     "streak_3": ("🔥", "On Fire", "Built robots 3 days in a row"),
     "streak_7": ("🌋", "Unstoppable", "Built robots 7 days in a row"),
-    "week_1": ("1️⃣", "Week 1 Done", "Made it move — bosses beaten, remixes built"),
+    "week_1": ("1️⃣", "Week 1 Done", "Made it move — bosses, remixes and side quests done"),
     "week_2": ("2️⃣", "Week 2 Done", "Robots that sense"),
     "week_3": ("3️⃣", "Week 3 Done", "Followed the line"),
     "week_4": ("4️⃣", "Week 4 Done", "Know where you are"),
     "week_5": ("5️⃣", "Week 5 Done", "Grab & build"),
-    "week_6": ("🎓", "Graduate", "Finished the whole 6-week RoboQuest, every boss and remix included!"),
+    "week_6": ("🎓", "Graduate", "Finished the whole 6-week RoboQuest — every boss, remix and side quest!"),
 }
 
 
@@ -156,9 +156,11 @@ def evaluate_badges(learner_id, projects):
     # a week counts as done only when every project in it has its missions, its boss AND a remix done
     remixed = {r["project_id"] for r in db.q("SELECT DISTINCT project_id FROM remixes WHERE learner_id=?", L)}
     finished_ids = {p["id"] for p in finished if (p["id"], "boss") in done and p["id"] in remixed}
+    from .curriculum import week_practice
     for w in range(1, 7):
         wk = [p for p in projects if p["week"] == w]
-        if wk and all(p["id"] in finished_ids for p in wk):
+        quests_done = all(("_practice", pr["id"]) in done for pr in week_practice(w))
+        if wk and quests_done and all(p["id"] in finished_ids for p in wk):
             earned.add(f"week_{w}")
     new = []
     for b in sorted(earned - have):

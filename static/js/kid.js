@@ -104,7 +104,8 @@ export async function viewHome(app) {
   const total = state.curriculum.projects.length;
   const done = s.projects.filter((p) => p.complete).length;
   const steps = s.projects.reduce((a, p) => a + p.steps_done, 0), all = s.projects.reduce((a, p) => a + p.steps_total, 0);
-  const cur = pos ? project(pos.project) : null;
+  const isQuest = pos?.project === "_practice";
+  const cur = pos ? (isQuest ? { emoji: "🗡️", week: pos.week, title: pos.project_title } : project(pos.project)) : null;
   const statusPill = { ahead: "good", "on track": "good", behind: "warn" }[g.schedule.status] || "";
   app.innerHTML = `
     <div class="hello"><div class="av">${state.learner.avatar}</div>
@@ -112,7 +113,8 @@ export async function viewHome(app) {
     <div class="grid g2">
       ${cur ? `<div class="card continue-card"><div class="big-emoji">${cur.emoji}</div>
         <div style="flex:1"><div class="faint small">Week ${cur.week} · ${esc(cur.title)}</div>
-        <h2 style="margin:2px 0 8px">${esc(pos.step_title)}</h2><a class="btn primary" href="${pos.step === "remix" ? `#/remix/${pos.project}` : `#/code/${pos.project}/${pos.step}`}">Continue →</a></div></div>`
+        <h2 style="margin:2px 0 8px">${esc(pos.step_title)}</h2><a class="btn primary" href="${isQuest ? `#/practice/${pos.step}` : pos.step === "remix" ? `#/remix/${pos.project}` : `#/code/${pos.project}/${pos.step}`}">Continue →</a>
+        ${isQuest ? `<div class="faint small" style="margin-top:6px">Finish every week ${pos.week} side quest to unlock week ${pos.week + 1}.</div>` : ""}</div></div>`
       : `<div class="card continue-card"><div class="big-emoji">🎓</div><div><h2>RoboQuest complete!</h2><p class="muted">All 12 robots built. Design your own arena and challenge a friend.</p>
         <a class="btn primary" href="#/builder">Arena builder</a></div></div>`}
       <div class="card"><div class="stats">
@@ -162,7 +164,8 @@ function badgeGrid(badges, onlyEarned = false) {
 function questMap(s) {
   const pos = s.guide.position;
   return `<div class="weeks">${[1, 2, 3, 4, 5, 6].map((w) => `<div class="week">
-    <div class="week-head"><span class="wk">WEEK ${w}</span><span class="muted">${WEEK_NAMES[w]}</span></div>
+    <div class="week-head"><span class="wk">WEEK ${w}</span><span class="muted">${WEEK_NAMES[w]}</span><span class="spacer"></span>
+      ${s.week_quests?.[w]?.total ? `<a class="pill ${s.week_quests[w].done === s.week_quests[w].total ? "good" : ""}" href="#/practice">🗡️ side quests ${s.week_quests[w].done}/${s.week_quests[w].total}</a>` : ""}</div>
     <div class="proj-row">${s.projects.filter((p) => p.week === w).map((ps) => {
       const p = project(ps.id);
       if (!p) return "";
@@ -380,9 +383,8 @@ export async function viewPractice(app, id) {
     if (!pr) { app.innerHTML = "<p>Unknown side quest</p>"; return; }
     setContext("_practice", id);
     const st = await refreshState();
-    const firstWeek = Math.min(99, ...state.curriculum.projects.filter((p) => p.concepts.includes(pr.concept)).map((p) => p.week));
     const openWeek = Math.max(1, ...st.projects.filter((p) => p.unlocked).map((p) => p.week));
-    if (firstWeek !== 99 && firstWeek > openWeek) { toast(`🔒 This side quest unlocks in week ${firstWeek}.`); location.hash = "#/practice"; return; }
+    if (pr.week > openWeek) { toast(`🔒 This side quest unlocks in week ${pr.week}.`); location.hash = "#/practice"; return; }
     if (state.isStale?.()) return;
     missionShell(app, {
       crumbs: `<a href="#/practice">Side quests</a> › ${concept(pr.concept)}`,
@@ -404,18 +406,20 @@ export async function viewPractice(app, id) {
   setContext("_practice", "-");
   const s = await refreshState();
   const rec = new Set(s.guide.kid.filter((r) => r.kind === "practice").map((r) => r.action.id));
-  const learnedWeek = Math.max(1, ...s.projects.filter((p) => p.unlocked).map((p) => p.week));
-  const byConcept = {};
-  list.forEach((p) => (byConcept[p.concept] = byConcept[p.concept] || []).push(p));
-  const conceptWeek = {};
-  state.curriculum.projects.forEach((p) => p.concepts.forEach((c) => { conceptWeek[c] = Math.min(conceptWeek[c] || 99, p.week); }));
-  app.innerHTML = `<h1>Side quests</h1><p class="muted">Short challenges to sharpen one skill. The ones your guide recommends are marked ★.</p>
-    <div class="grid g3">${Object.entries(byConcept).sort((a, b) => (conceptWeek[a[0]] || 9) - (conceptWeek[b[0]] || 9)).map(([c, items]) => {
-      const locked = (conceptWeek[c] || 1) > learnedWeek;
-      return `<div class="card ${locked ? "faint" : ""}"><h3>${concept(c)} ${locked ? "🔒" : ""}</h3>
-      ${locked ? `<p class="faint">Unlocks in week ${conceptWeek[c]}</p>` : `<div class="steps">${items.sort((a, b) => a.difficulty - b.difficulty).map((p) => `
-        <a class="step-row ${isDone("_practice", p.id) ? "done" : ""}" href="#/practice/${p.id}"><span class="num">${isDone("_practice", p.id) ? "✓" : p.difficulty}</span>
-        <b style="flex:1">${esc(p.title)} ${rec.has(p.id) ? "★" : ""}</b><span class="faint small">${"★".repeat(p.difficulty)}</span></a>`).join("")}</div>`}</div>`;
+  const openWeek = Math.max(1, ...s.projects.filter((p) => p.unlocked).map((p) => p.week));
+  const weeks = [...new Set(list.map((p) => p.week))].sort((a, b) => a - b);
+  app.innerHTML = `<h1>Side quests</h1><p class="muted">Short challenges to sharpen one skill. Every side quest in a week must be done
+    (in any order) before the next week unlocks. The ones your guide recommends are marked ★.</p>
+    <div class="weeks">${weeks.map((w) => {
+      const items = list.filter((p) => p.week === w), q = s.week_quests?.[w] || { done: 0, total: items.length };
+      const locked = w > openWeek;
+      return `<div class="card ${locked ? "faint" : ""}"><div class="card-head"><h3>Week ${w} · ${WEEK_NAMES[w] || ""} ${locked ? "🔒" : ""}</h3><span class="spacer"></span>
+        <span class="pill ${q.done === q.total ? "good" : ""}">${q.done}/${q.total} done</span></div>
+        ${locked ? `<p class="faint">Unlocks in week ${w}.</p>` : `${q.done < q.total ? `<p class="faint small" style="margin-top:0">Required to unlock week ${w + 1}.</p>` : ""}
+        <div class="grid g3" style="gap:8px">${items.sort((a, b) => a.difficulty - b.difficulty).map((p) => `
+          <a class="step-row ${isDone("_practice", p.id) ? "done" : ""}" href="#/practice/${p.id}"><span class="num">${isDone("_practice", p.id) ? "✓" : p.difficulty}</span>
+          <div style="flex:1;min-width:0"><b>${esc(p.title)} ${rec.has(p.id) ? "★" : ""}</b><div class="faint small">${concept(p.concept)}</div></div>
+          <span class="faint small">${"★".repeat(p.difficulty)}</span></a>`).join("")}</div>`}</div>`;
     }).join("")}</div>`;
 }
 

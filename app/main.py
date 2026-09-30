@@ -250,6 +250,7 @@ def learner_state(lid: int):
         "progress": prog,
         "projects": analytics.project_status(lid),
         "open": _open_map(lid),
+        "week_quests": analytics.week_quests(lid),
         "badges": gamification.badge_list(lid),
         "guide": {"kid": g["kid"], "path": g["path"], "position": g["position"], "schedule": g["schedule"]},
         "today_minutes": round(db.scalar("SELECT SUM(seconds) FROM time_log WHERE learner_id=? AND day=?",
@@ -328,11 +329,16 @@ def step_lock(lid, project, step):
         pr = PRACTICE_BY_ID.get(step)
         if not pr:
             return None
-        first = min([p["week"] for p in PROJECTS if pr["concept"] in p["concepts"]] or [1])
-        return None if first <= _unlocked_week(lid) else f"This side quest unlocks in week {first}."
+        return None if pr["week"] <= _unlocked_week(lid) else f"This side quest unlocks in week {pr['week']}."
     if project not in BY_ID:
         return None
     if project not in _unlocked_projects(lid):
+        wk = BY_ID[project]["week"]
+        earlier = [p for p in PROJECTS if p["week"] == wk - 1]
+        if earlier and BY_ID[project] is next(p for p in PROJECTS if p["week"] == wk):
+            q = analytics.week_quests(lid)[wk - 1]
+            if q["next"] and all(p["id"] in _unlocked_projects(lid) for p in earlier):
+                return f"Finish all week {wk - 1} side quests first ({q['done']}/{q['total']} done)."
         return "Finish the previous robot (all missions, its boss and a remix) first — then this one unlocks."
     ids = [x["id"] for x in BY_ID[project]["steps"]]
     done = _done_steps(lid, project)

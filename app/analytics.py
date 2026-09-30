@@ -5,7 +5,7 @@ from collections import Counter, defaultdict
 
 from . import db, gamification
 from .analysis import GENERIC, monster
-from .curriculum import PRACTICE, PROJECTS
+from .curriculum import PRACTICE, PROJECTS, week_practice
 from .sandbox import kidast
 
 DAY = 86400
@@ -20,7 +20,13 @@ def project_status(learner_id, prog=None):
     """Per-project progress, unlock state and time vs. expectation."""
     prog = prog or _progress(learner_id)
     out, unlocked = [], True
+    practice_done = {k[1] for k, r in prog.items() if k[0] == "_practice" and r["status"] == "done"}
+    prev_week = None
     for p in PROJECTS:
+        # a new week unlocks only after every side quest of the previous week is done
+        if prev_week is not None and p["week"] != prev_week:
+            unlocked = unlocked and all(pr["id"] in practice_done for pr in week_practice(prev_week))
+        prev_week = p["week"]
         core = p["steps"]
         rows = [prog.get((p["id"], s["id"])) for s in core]
         done = [r for r in rows if r and r["status"] == "done"]
@@ -50,10 +56,29 @@ def project_status(learner_id, prog=None):
     return out
 
 
+def week_quests(learner_id, prog=None):
+    """{week: {"done": n, "total": n, "next": first unfinished side quest or None}}."""
+    prog = prog or _progress(learner_id)
+    out = {}
+    for w in sorted({p["week"] for p in PROJECTS}):
+        items = week_practice(w)
+        todo = [pr for pr in items if (prog.get(("_practice", pr["id"])) or {}).get("status") != "done"]
+        out[w] = {"done": len(items) - len(todo), "total": len(items),
+                  "next": {"id": todo[0]["id"], "title": todo[0]["title"]} if todo else None}
+    return out
+
+
 def current_position(learner_id, statuses=None, prog=None):
     prog = prog or _progress(learner_id)
     statuses = statuses or project_status(learner_id, prog)
+    quests = week_quests(learner_id, prog)
+    prev_week = None
     for ps in statuses:
+        if prev_week is not None and ps["week"] != prev_week and quests[prev_week]["next"]:
+            q = quests[prev_week]["next"]
+            return {"project": "_practice", "step": q["id"], "project_title": f"Week {prev_week} side quests",
+                    "step_title": f"Side quest: {q['title']}", "week": prev_week}
+        prev_week = ps["week"]
         if not (ps["complete"] and ps["boss_done"] and ps["remixed"]):
             p = next(x for x in PROJECTS if x["id"] == ps["id"])
             for s in p["steps"] + [p["boss"]]:
@@ -64,6 +89,10 @@ def current_position(learner_id, statuses=None, prog=None):
                             "week": p["week"]}
             return {"project": p["id"], "step": "remix", "project_title": p["title"],
                     "step_title": "Remix lab: make it your own", "week": p["week"]}
+    if prev_week is not None and quests[prev_week]["next"]:
+        q = quests[prev_week]["next"]
+        return {"project": "_practice", "step": q["id"], "project_title": f"Week {prev_week} side quests",
+                "step_title": f"Side quest: {q['title']}", "week": prev_week}
     return None
 
 

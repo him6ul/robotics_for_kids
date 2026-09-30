@@ -11,10 +11,16 @@ for _w in range(1, 7):
             raise
         continue
     PROJECTS.extend(getattr(_m, "PROJECTS", []))
-    PRACTICE.extend(getattr(_m, "PRACTICE", []))
+    for _pr in getattr(_m, "PRACTICE", []):
+        _pr.setdefault("week", _w)          # side quests belong to the week file they're in
+        PRACTICE.append(_pr)
 PROJECTS.sort(key=lambda p: p["order"])
 BY_ID = {p["id"]: p for p in PROJECTS}
 PRACTICE_BY_ID = {p["id"]: p for p in PRACTICE}
+
+
+def week_practice(week):
+    return [pr for pr in PRACTICE if pr["week"] == week]
 
 
 def step(project_id, step_id):
