@@ -69,7 +69,7 @@ BADGES = {
     "remixer": ("🎛️", "Remix Master", "Remixed 3 projects your own way"),
     "big_thinker": ("💡", "Big Thinker", "Had an idea rated Architect or higher"),
     "explorer": ("🧭", "Explorer", "Ran 10 experiments in the Playground"),
-    "practice_pro": ("🥋", "Practice Pro", "Cleared 10 side quests"),
+    "practice_pro": ("🥋", "Practice Pro", "Cleared every side quest in RoboQuest"),
     "boss_1": ("👾", "Boss Beater", "Beat your first boss challenge"),
     "boss_5": ("🐲", "Boss Crusher", "Beat 5 boss challenges"),
     "streak_3": ("🔥", "On Fire", "Built robots 3 days in a row"),
@@ -141,7 +141,8 @@ def evaluate_badges(learner_id, projects):
         earned.add("big_thinker")
     if db.scalar("SELECT COUNT(*) FROM runs WHERE learner_id=? AND mode='playground'", L) >= 10:
         earned.add("explorer")
-    if db.scalar("SELECT COUNT(*) FROM step_progress WHERE learner_id=? AND project_id='_practice' AND status='done'", L) >= 10:
+    from .curriculum import PRACTICE
+    if PRACTICE and all(("_practice", pr["id"]) in done for pr in PRACTICE):
         earned.add("practice_pro")
     bosses = sum(1 for k in done if k[1] == "boss")
     if bosses >= 1:
