@@ -45,8 +45,8 @@ def project_status(learner_id, prog=None):
             "fun": reflection["fun"] if reflection else None,
             "difficulty": reflection["difficulty"] if reflection else None,
         })
-        # the next robot unlocks only after all five missions AND the boss are beaten
-        unlocked = unlocked and complete and bool(boss and boss["status"] == "done")
+        # the next robot unlocks only after all five missions, the boss AND a remix are done
+        unlocked = unlocked and complete and bool(boss and boss["status"] == "done") and out[-1]["remixed"]
     return out
 
 
@@ -54,7 +54,7 @@ def current_position(learner_id, statuses=None, prog=None):
     prog = prog or _progress(learner_id)
     statuses = statuses or project_status(learner_id, prog)
     for ps in statuses:
-        if not (ps["complete"] and ps["boss_done"]):
+        if not (ps["complete"] and ps["boss_done"] and ps["remixed"]):
             p = next(x for x in PROJECTS if x["id"] == ps["id"])
             for s in p["steps"] + [p["boss"]]:
                 r = prog.get((p["id"], s["id"]))
@@ -62,6 +62,8 @@ def current_position(learner_id, statuses=None, prog=None):
                     title = f"Boss: {s['title']}" if s["id"] == "boss" else s["title"]
                     return {"project": p["id"], "step": s["id"], "project_title": p["title"], "step_title": title,
                             "week": p["week"]}
+            return {"project": p["id"], "step": "remix", "project_title": p["title"],
+                    "step_title": "Remix lab: make it your own", "week": p["week"]}
     return None
 
 
@@ -468,7 +470,7 @@ def guide(learner_id):
         fast = last_done["seconds"] and last_done["seconds"] < last_done["expected_seconds"] * 0.9
         clean = last_done["steps_total"] and last_done["first_try"] / last_done["steps_total"] >= 0.5
         # (the boss is required now, so "Continue" already points at it — no separate suggestion)
-        if not last_done["remixed"]:
+        if not last_done["remixed"] and not (pos and pos["project"] == last_done["id"] and pos["step"] == "remix"):
             add(kid, "remix", f"Remix {proj['title']}", proj["remix"]["prompt"], 60,
                 {"type": "remix", "project": proj["id"]}, "🎛️")
         if last_done["fun"] is None:
