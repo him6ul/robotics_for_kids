@@ -394,6 +394,7 @@ export function reflect(pid, thenRoute = false) {
     <p><b>How fun was it?</b></p><div class="rating" data-r="fun">${fun.map((e, i) => `<button data-v="${i + 1}">${e}</button>`).join("")}</div>
     <p><b>How hard was it?</b></p><div class="rating" data-r="hard">${hard.map((e, i) => `<button data-v="${i + 1}">${e}</button>`).join("")}</div>
     <textarea id="note" rows="2" placeholder="Anything you loved or hated? (optional)"></textarea>
+    ${state.kidState?.badges ? `<div style="text-align:left;margin-top:14px">${badgeProgress(state.kidState.badges)}</div>` : ""}
     <p class="row" style="justify-content:center;margin-top:12px"><button class="btn primary" id="send">Send</button><button class="btn ghost" data-close>Skip</button></p>`);
   m.node.querySelectorAll(".rating").forEach((row) => row.querySelectorAll("button").forEach((b) => b.onclick = () => {
     row.querySelectorAll("button").forEach((x) => x.classList.toggle("sel", x === b));
