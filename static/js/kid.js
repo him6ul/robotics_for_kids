@@ -129,7 +129,7 @@ export async function viewHome(app) {
     </div>
     <div class="grid g2" style="margin-top:16px">
       <div class="card"><h3>Your guide suggests</h3><div class="guide-list">${g.kid.map(guideItem).join("")}</div></div>
-      <div class="card"><h3>Recent badges</h3>${badgeGrid(s.badges.filter((b) => b.earned_at).sort((a, b) => b.earned_at - a.earned_at).slice(0, 6), true)}
+      <div class="card"><h3>Recent badges</h3>${badgeProgress(s.badges)}${badgeGrid(s.badges.filter((b) => b.earned_at).sort((a, b) => b.earned_at - a.earned_at).slice(0, 6), true)}
         <p class="small"><a href="#/journey">All badges and your stats →</a></p></div>
     </div>
     <h2 style="margin-top:26px">The 6-week quest</h2>
@@ -167,6 +167,13 @@ function badgeSections(badges) {
     return `<div style="margin-top:14px"><div class="row" style="margin-bottom:8px"><b>${esc(cat)}</b>
       <span class="pill ${got === items.length ? "good" : ""}">${got}/${items.length}</span></div>${badgeGrid(items)}</div>`;
   }).join("");
+}
+
+function badgeProgress(badges) {
+  const got = badges.filter((b) => b.earned_at).length, total = badges.length;
+  return `<div style="margin-bottom:12px"><div class="row"><span class="muted small">Badges collected</span><span class="spacer"></span>
+    <b class="small">${got}/${total}</b></div>
+    <div class="progress" style="margin-top:5px" title="${Math.round(got / total * 100)}% of all badges"><i style="width:${total ? got / total * 100 : 0}%"></i></div></div>`;
 }
 
 function badgeGrid(badges, onlyEarned = false) {
