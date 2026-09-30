@@ -613,7 +613,7 @@ export async function viewJourney(app) {
     </div>
     <div class="card" style="margin-top:16px"><div class="card-head"><h3>Badges</h3><span class="spacer"></span>
       <span class="pill">${s.badges.filter((b) => b.earned_at).length}/${s.badges.length} earned</span></div>
-      ${badgeSections(s.badges)}</div>`;
+      ${badgeProgress(s.badges)}${badgeSections(s.badges)}</div>`;
   const { grid } = chartDefaults();
   const col = seriesColors();
   makeChart(app.querySelector("#c-style"), {
