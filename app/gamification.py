@@ -74,12 +74,12 @@ BADGES = {
     "boss_5": ("🐲", "Boss Crusher", "Beat 5 boss challenges"),
     "streak_3": ("🔥", "On Fire", "Built robots 3 days in a row"),
     "streak_7": ("🌋", "Unstoppable", "Built robots 7 days in a row"),
-    "week_1": ("1️⃣", "Week 1 Done", "Made it move"),
+    "week_1": ("1️⃣", "Week 1 Done", "Made it move — bosses beaten"),
     "week_2": ("2️⃣", "Week 2 Done", "Robots that sense"),
     "week_3": ("3️⃣", "Week 3 Done", "Followed the line"),
     "week_4": ("4️⃣", "Week 4 Done", "Know where you are"),
     "week_5": ("5️⃣", "Week 5 Done", "Grab & build"),
-    "week_6": ("🎓", "Graduate", "Finished the whole 6-week RoboQuest!"),
+    "week_6": ("🎓", "Graduate", "Finished the whole 6-week RoboQuest, every boss included!"),
 }
 
 
@@ -153,7 +153,8 @@ def evaluate_badges(learner_id, projects):
         earned.add("streak_3")
     if st >= 7:
         earned.add("streak_7")
-    finished_ids = {p["id"] for p in finished}
+    # a week counts as done only when every project in it has its missions AND its boss beaten
+    finished_ids = {p["id"] for p in finished if (p["id"], "boss") in done}
     for w in range(1, 7):
         wk = [p for p in projects if p["week"] == w]
         if wk and all(p["id"] in finished_ids for p in wk):
