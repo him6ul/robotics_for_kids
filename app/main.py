@@ -419,27 +419,41 @@ def get_arena(lid: int, ref: str):
     return robosim.public(robosim.normalize(a))
 
 
+def _nums(item, n):
+    """First n values of item as finite floats, or None if any is missing / not a number."""
+    try:
+        vals = [float(v) for v in list(item)[:n]]
+    except (TypeError, ValueError):
+        return None
+    return vals if len(vals) == n and all(v == v and abs(v) != float("inf") for v in vals) else None
+
+
 def _clean_arena(spec):
-    """Keep only known keys with sane sizes (arenas come from the builder UI)."""
+    """Keep only known keys with sane sizes (arenas come from the builder UI); drop malformed entries."""
     if not isinstance(spec, dict):
         raise HTTPException(400, "Arena must be an object")
     out = {"name": str(spec.get("name", "My arena"))[:40]}
     w, h = spec.get("size", [300, 200])
     out["size"] = [max(80, min(600, float(w))), max(80, min(400, float(h)))]
-    st = spec.get("start", [40, 40, 0])
-    out["start"] = [float(st[0]), float(st[1]), float(st[2] if len(st) > 2 else 0)]
+    st = list(spec.get("start") or []) + [0, 0, 0]
+    out["start"] = _nums(st[:2], 2) and _nums(st, 3) or [40.0, 40.0, 0.0]
     lists = {"walls": 4, "boxes": 4, "gems": 2, "lights": 2}
     for k, n in lists.items():
-        out[k] = [[float(v) for v in item[:n]] for item in (spec.get(k) or [])[:150] if len(item) >= n]
-    out["lines"] = [{"pts": [[float(p[0]), float(p[1])] for p in ln.get("pts", [])[:300]], "closed": bool(ln.get("closed")),
-                     "width": max(1.0, min(6.0, float(ln.get("width", 2.5))))} for ln in (spec.get("lines") or [])[:20]]
-    out["zones"] = [{"name": str(z.get("name", f"zone{i}"))[:20], "rect": [float(v) for v in z["rect"][:4]],
-                     "color": str(z.get("color", "green"))[:12], "label": str(z.get("label", ""))[:12]}
-                    for i, z in enumerate((spec.get("zones") or [])[:30]) if len(z.get("rect", [])) >= 4]
-    out["blocks"] = [{"pos": [float(b["pos"][0]), float(b["pos"][1])], "color": str(b.get("color", "red"))[:12]}
-                     for b in (spec.get("blocks") or [])[:20] if len(b.get("pos", [])) >= 2]
-    if spec.get("finish") and len(spec["finish"]) >= 4:
-        out["finish"] = [float(v) for v in spec["finish"][:4]]
+        out[k] = [v for v in (_nums(item, n) for item in (spec.get(k) or [])[:150]) if v is not None]
+    out["lines"] = []
+    for ln in (spec.get("lines") or [])[:20]:
+        pts = [v for v in (_nums(p, 2) for p in (ln.get("pts") or [])[:300]) if v is not None]
+        if len(pts) >= 2:
+            w = _nums([ln.get("width", 2.5)], 1)
+            out["lines"].append({"pts": pts, "closed": bool(ln.get("closed")), "width": max(1.0, min(6.0, w[0] if w else 2.5))})
+    out["zones"] = [{"name": str(z.get("name", f"zone{i}"))[:20], "rect": r, "color": str(z.get("color", "green"))[:12],
+                     "label": str(z.get("label", ""))[:12]}
+                    for i, z in enumerate((spec.get("zones") or [])[:30]) for r in [_nums(z.get("rect") or [], 4)] if r]
+    out["blocks"] = [{"pos": pos, "color": str(b.get("color", "red"))[:12]}
+                     for b in (spec.get("blocks") or [])[:20] for pos in [_nums(b.get("pos") or [], 2)] if pos]
+    fin = _nums(spec.get("finish") or [], 4)
+    if fin:
+        out["finish"] = fin
     out["noise"] = max(0.0, min(1.0, float(spec.get("noise", 0))))
     out["gps"] = bool(spec.get("gps"))
     out["gripper"] = bool(spec.get("gripper"))

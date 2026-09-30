@@ -2,7 +2,7 @@
 import { api, celebrate, esc, setContext, state, toast, uiEvent } from "./core.js";
 import { ArenaView, colorOf } from "./arena.js";
 import { showBadge } from "./workspace.js";
-import { refreshState } from "./kid.js";
+import { badgeProgress, refreshState } from "./kid.js";
 
 const TOOLS = [
   ["start", "🤖", "Robot start", "Click to place, then click again to aim"],
@@ -39,6 +39,7 @@ export async function viewBuilder(app, id) {
         <div class="choice-grid" data-colors style="margin-top:8px">${COLORS.map((c, i) => `<button class="swatch ${i ? "" : "sel"}" data-c="${c}" style="background:${colorOf(c)}" title="${c}"></button>`).join("")}</div></div>
       <div class="card"><h3>My arenas</h3><div class="list-sm">${mine.map((a) => `<div class="it"><a href="#/builder/${a.id}" style="flex:1">${esc(a.name)}</a><span class="faint small">${a.complexity}</span></div>`).join("") || `<span class="faint">None yet</span>`}</div>
         <p style="margin-bottom:0"><a class="btn small" href="#/builder">+ New arena</a></p></div>
+      <div class="card"><h3>Badges</h3><div data-badges></div></div>
     </aside>
     <div class="arena-box"><div data-arena></div><div class="row small faint"><span data-coords>—</span><span class="spacer"></span>
       <button class="btn small ghost" data-undo>Undo</button><button class="btn small ghost" data-clear>Clear all</button></div></div>
@@ -57,6 +58,12 @@ export async function viewBuilder(app, id) {
         ${arenaId ? `<p style="margin-bottom:0"><button class="btn small ghost" data-del>Delete arena</button></p>` : ""}</div>
       <div class="card"><h3>Challenge idea</h3><p class="muted small" style="margin:0">Build a maze and see if your wall-follower escapes. Or hide gems behind boxes and race a friend in Drive mode.</p></div>
     </aside></div>`;
+  const renderBadges = (badges) => {
+    const b = badges.find((x) => x.id === "builder");
+    app.querySelector("[data-badges]").innerHTML = badgeProgress(badges) + `<p class="faint small" style="margin:0">${b?.earned_at
+      ? "🏗️ Arena Architect earned — great designs!" : `Design 3 arenas to earn 🏗️ Arena Architect (${Math.min(mine.length, 3)}/3).`}</p>`;
+  };
+  renderBadges(state.kidState.badges);
   disposeBuilder();
   view = new ArenaView(app.querySelector("[data-arena]"), { noHud: true });
   const $ = (s) => app.querySelector(s);
@@ -99,13 +106,19 @@ export async function viewBuilder(app, id) {
   };
   let hover = null;
   const cv = view.canvas;
-  const W = (e) => { const [x, y] = view.toWorld(e.clientX, e.clientY); return [Math.max(0, Math.min(spec.size[0], snap(x))), Math.max(0, Math.min(spec.size[1], snap(y)))]; };
+  const W = (e) => {
+    const [x, y] = view.toWorld(e.clientX, e.clientY);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;          // canvas not laid out yet
+    return [Math.max(0, Math.min(spec.size[0], snap(x))), Math.max(0, Math.min(spec.size[1], snap(y)))];
+  };
   cv.addEventListener("pointerdown", (e) => {
     const p = W(e);
+    if (!p) return;
     if (["wall", "box", "zone"].includes(tool)) { drag = { a: p, b: p }; cv.setPointerCapture(e.pointerId); }
   });
   cv.addEventListener("pointermove", (e) => {
     const p = W(e);
+    if (!p) return;
     hover = p;
     $("[data-coords]").textContent = `x ${p[0]}  y ${p[1]}`;
     if (drag) { drag.b = p; view.draw(); } else if (linePts) view.draw();
@@ -113,6 +126,7 @@ export async function viewBuilder(app, id) {
   cv.addEventListener("pointerup", (e) => {
     if (!drag) return;
     const [x0, y0] = drag.a, [x1, y1] = drag.b;
+    if (!W(e)) { drag = null; return; }
     drag = null;
     if (Math.hypot(x1 - x0, y1 - y0) < 5) { view.draw(); return; }
     push();
@@ -126,6 +140,7 @@ export async function viewBuilder(app, id) {
   });
   cv.addEventListener("click", (e) => {
     const p = W(e);
+    if (!p) return;
     if (tool === "start") {
       push();
       const [sx, sy] = spec.start;
@@ -190,6 +205,8 @@ export async function viewBuilder(app, id) {
     toast(`Saved “${esc(r.spec.name)}” · design score ${r.complexity}${r.xp ? ` · +${r.xp} XP` : ""}`);
     if (first) celebrate(0.6);
     r.badges.forEach(showBadge);
+    if (first) mine.push({ id: r.id });
+    refreshState().then((st) => renderBadges(st.badges));
     uiEvent("builder.test", `arena/${r.id}`);
     enable(r.ref);
     if (first) window.history.replaceState(null, "", `#/builder/${r.id}`);
