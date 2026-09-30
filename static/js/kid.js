@@ -591,8 +591,11 @@ export async function viewRemix(app, pid) {
 // ---------------------------------------------------------------- manual
 export async function viewManual(app) {
   setContext("_manual", "-");
-  await refreshState();
-  app.innerHTML = `<h1>Robot manual</h1>${manualHTML()}`;
+  const st = await refreshState();
+  app.innerHTML = `<h1>Robot manual</h1>
+    <div class="card" style="margin-bottom:14px">${badgeProgress(st.badges)}
+      <p class="faint small" style="margin:0">Every command you master gets you closer to the next badge — try them in the <a href="#/playground">Playground</a>.</p></div>
+    ${manualHTML()}`;
 }
 
 // ---------------------------------------------------------------- my journey (kid analytics)
