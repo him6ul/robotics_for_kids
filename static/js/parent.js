@@ -413,6 +413,7 @@ async function monitoring(body) {
       ${kpi(`${(h.db_bytes / 1e6).toFixed(2)} MB`, "Database size", `${h.disk_free_gb} GB disk free`)}
       ${kpi(h.rss_mb ? `${h.rss_mb} MB` : "—", "Server memory (peak)", `Python ${h.python} · pid ${h.pid}`)}
       ${kpi(m.tutor.calls, "AI tutor calls", `avg ${m.tutor.avg_ms ?? "—"} ms · p95 ${m.tutor.p95_ms ?? "—"} ms · ${m.tutor.errors} errors · ${m.tutor.refused} declined`)}
+      ${kpi(m.email.sent, "Emails sent", `${m.email.failed} failed`)}
       ${kpi((m.tutor.tokens_in + m.tutor.tokens_out).toLocaleString(), "AI tutor tokens", `${m.tutor.tokens_in.toLocaleString()} in · ${m.tutor.tokens_out.toLocaleString()} out`)}
     </div>
     <div class="grid g2">
@@ -517,6 +518,7 @@ async function settings(body) {
       <p><button class="btn primary" id="save">Save</button></p>
       <h3 style="margin-top:24px">Danger zone</h3><p class="muted">Permanently delete this learner and all of their progress, code and analytics. The audit log keeps a record that it happened.</p>
       <button class="btn danger" id="del">Delete ${esc(l.name)}'s data</button></div>` : ""}
+    <div class="card" id="emailcard"><h3>Weekly email</h3><p class="muted">Loading…</p></div>
     <div class="card"><h3>Parent PIN</h3><p><input type="password" id="np" placeholder="New PIN" inputmode="numeric"> <button class="btn" id="chg">Change PIN</button></p>
       <h3 style="margin-top:20px">Appearance</h3><p><select id="pt"><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select>
         <label style="margin-left:10px"><input type="checkbox" id="cel"> Confetti on success</label></p>
@@ -542,6 +544,7 @@ async function settings(body) {
   const cel = body.querySelector("#cel");
   cel.checked = store.get("rq_celebrate", "on") !== "off";
   cel.onchange = () => store.set("rq_celebrate", cel.checked ? "on" : "off");
+  emailCard(body.querySelector("#emailcard"));
   body.querySelector("#showsol").onclick = async () => {
     const [p, s] = body.querySelector("#sol").value.split("/");
     const d = await api(`/api/parent/solution/${p}/${s}`);
@@ -602,4 +605,51 @@ async function replayModal(snap) {
   m.node.querySelector("[data-p]").onclick = () => v.toggle();
   const obs = new MutationObserver(() => { if (!document.body.contains(m.node)) { v.dispose(); obs.disconnect(); } });
   obs.observe(document.getElementById("modal-root"), { childList: true });
+}
+
+// ---------------------------------------------------------------- weekly email (settings card)
+async function emailCard(host) {
+  const e = await api("/api/parent/email");
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  host.innerHTML = `<h3>Weekly email</h3>
+    <p class="muted" style="margin-top:0">A progress email each week per learner, with the badge progress bar, this week's time, missions and
+      side quests, quest progress and coaching notes. It's sent through your own email account (SMTP) while RoboQuest is running.
+      For Gmail use <code>smtp.gmail.com</code>, port 587, STARTTLS and an <i>app password</i>.</p>
+    <div class="form-grid" style="grid-template-columns:130px 1fr">
+      <label>Send to</label><input id="em-to" placeholder="you@example.com, partner@example.com" value="${esc(e.recipients.join(", "))}">
+      <label>When</label><div class="row"><select id="em-day">${days.map((d, i) => `<option value="${i}" ${i === e.weekday ? "selected" : ""}>${d}</option>`).join("")}</select>
+        <select id="em-hour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === e.hour ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`).join("")}</select></div>
+      <label>SMTP server</label><div class="row"><input id="em-host" placeholder="smtp.gmail.com" value="${esc(e.smtp_host)}" style="flex:1">
+        <input id="em-port" type="number" value="${e.smtp_port}" style="width:80px">
+        <select id="em-sec">${["starttls", "ssl", "none"].map((x) => `<option ${x === e.security ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+      <label>Username</label><input id="em-user" value="${esc(e.username)}" autocomplete="off">
+      <label>Password</label><input id="em-pass" type="password" autocomplete="new-password" placeholder="${e.has_password ? "••• saved — leave blank to keep" : "app password"}">
+      <label>From address</label><input id="em-from" placeholder="(defaults to the username)" value="${esc(e.from_addr)}">
+      <label>Enabled</label><label><input type="checkbox" id="em-on" ${e.enabled ? "checked" : ""}> Send the weekly email automatically</label>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" id="em-save">Save</button>
+      <a class="btn" href="/api/parent/email/preview/${sel}" target="_blank" rel="noopener">Preview</a>
+      <button class="btn" id="em-test" ${e.configured ? "" : "disabled"}>Send test now</button>
+      <span class="faint small">${e.next_send ? `Next send: ${esc(e.next_send.replace("T", " "))}` : "Automatic sending is off."}</span></div>
+    <p id="em-out" class="small"></p>
+    ${e.last.length ? `<div class="tscroll" style="max-height:200px"><table class="t"><thead><tr><th>When</th><th>Week</th><th>Kind</th><th>Status</th></tr></thead>
+      <tbody>${e.last.map((x) => `<tr><td>${fmtTime(x.ts)}</td><td>${esc(x.week)}</td><td>${esc(x.kind)}</td>
+      <td>${x.status === "sent" ? `<span class="pill good">sent</span>` : `<span class="pill bad" title="${esc(x.error || "")}">failed</span> <span class="faint small">${esc(x.error || "")}</span>`}</td></tr>`).join("")}</tbody></table></div>` : ""}`;
+  const $ = (id) => host.querySelector(id);
+  $("#em-save").onclick = async () => {
+    try {
+      await api("/api/parent/email", { method: "POST", body: {
+        recipients: $("#em-to").value, weekday: +$("#em-day").value, hour: +$("#em-hour").value, smtp_host: $("#em-host").value,
+        smtp_port: +$("#em-port").value, security: $("#em-sec").value, username: $("#em-user").value, password: $("#em-pass").value,
+        from_addr: $("#em-from").value, enabled: $("#em-on").checked } });
+      toast("Email settings saved");
+      emailCard(host);
+    } catch (err) { toast(esc(err.message)); }
+  };
+  $("#em-test").onclick = async () => {
+    $("#em-out").textContent = "Sending…";
+    const r = await api(`/api/parent/email/test/${sel}`, { method: "POST" });
+    $("#em-out").innerHTML = r.ok ? `✅ Sent “${esc(r.subject)}” to ${esc(r.recipients.join(", "))}.` : `❌ ${esc(r.error)}`;
+    if (r.ok) setTimeout(() => emailCard(host), 800);
+  };
 }

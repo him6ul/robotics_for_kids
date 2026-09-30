@@ -234,6 +234,8 @@ def snapshot(hours=24):
         "checker": checker, "checker_series": bucket("checker.duration_ms"),
         "tutor": tutor, "tutor_series": bucket("tutor.latency_ms"),
         "teleop": teleop, "active": dict(_gauges),
+        "email": {"sent": sum(r["count"] for r in series.get("email.sent", [])),
+                  "failed": sum(r["count"] for r in series.get("email.failed", []))},
         "errors": db.q("SELECT id, ts, source, message FROM app_errors ORDER BY ts DESC LIMIT 25"),
         "error_count_24h": db.scalar("SELECT COUNT(*) FROM app_errors WHERE ts >= ?", (time.time() - 86400,)),
         "tables": tables,
@@ -264,7 +266,8 @@ def data_overview():
         "audit_log": "Audit trail of all meaningful actions (learner, parent, system)",
         "metrics_minute": "Per-minute system metrics (HTTP, simulator, checker, teleop, tutor)",
         "app_errors": "Server-side exceptions",
-        "settings": "App settings (parent PIN hash, preferences, AI tutor settings)",
+        "settings": "App settings (parent PIN hash, preferences, AI tutor and weekly-email settings; the SMTP password is masked)",
+        "email_log": "Weekly parent emails and test emails: when, to whom, subject, sent or failed (no passwords)",
         "tutor_messages": "AI tutor (Sprocket) conversations and code reviews, with question type, concept, mood, tokens and latency",
     }
     tables = []

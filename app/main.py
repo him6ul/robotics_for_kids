@@ -18,7 +18,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request, WebSocket, W
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import analysis, analytics, db, gamification, report, tutor
+from . import analysis, analytics, db, digest, gamification, report, tutor
 from . import observability as obs
 from .curriculum import BY_ID, PRACTICE, PRACTICE_BY_ID, PROJECTS
 from .curriculum import step as find_step
@@ -35,6 +35,7 @@ MAX_CODE = 60_000
 app = FastAPI(title="RoboQuest")
 db.init()
 tutor.init()
+digest.init()
 obs.audit("system", "server.start", details={"python": sys.version.split()[0], "pid": os.getpid(),
                                                "projects": len(PROJECTS), "practice": len(PRACTICE)})
 
@@ -1045,6 +1046,38 @@ def parent_report_export(lid: int, fmt: str, request: Request, _=Depends(parent_
                     headers={"Content-Disposition": f"inline; filename={name}"})
 
 
+# ---------------------------------------------------------------------------
+# weekly email
+# ---------------------------------------------------------------------------
+@app.get("/api/parent/email")
+def parent_email_settings(_=Depends(parent_required)):
+    return digest.public_settings()
+
+
+@app.post("/api/parent/email")
+def parent_email_save(request: Request, body: dict = Body(...), _=Depends(parent_required)):
+    before = digest.redacted(digest.settings())
+    after = digest.redacted(digest.save_settings(body))
+    obs.audit("parent", "email.settings", details={"before": before, "after": after}, request=request)
+    return digest.public_settings()
+
+
+@app.get("/api/parent/email/preview/{lid}")
+def parent_email_preview(lid: int, _=Depends(parent_required)):
+    _learner(lid)
+    d = digest.build(lid)
+    return Response(d["html"], media_type="text/html")
+
+
+@app.post("/api/parent/email/test/{lid}")
+async def parent_email_test(lid: int, request: Request, _=Depends(parent_required)):
+    _learner(lid)
+    try:
+        return await asyncio.to_thread(digest.send_digest, lid, "test", "parent", request)
+    except digest.EmailError as e:
+        return {"ok": False, "error": str(e)}
+
+
 @app.get("/api/parent/timeline/{lid}")
 def parent_timeline(lid: int, limit: int = 300, _=Depends(parent_required)):
     return obs.audit_query(actor=f"learner:{lid}", limit=min(limit, 1000))
@@ -1122,7 +1155,8 @@ def parent_table(table: str, request: Request, limit: int = 50, offset: int = 0,
     order = "ts DESC" if "ts" in cols else "rowid DESC"
     rows = db.q(f"SELECT * FROM {table} {where} ORDER BY {order} LIMIT ? OFFSET ?", (*args, min(limit, 500), offset))
     if table == "settings":
-        rows = [{"key": r["key"], "value": "•••" if r["key"] == "parent_pin" else r["value"]} for r in rows]
+        rows = [{"key": r["key"], "value": "•••" if r["key"] == "parent_pin"
+                 else json.dumps(digest.redacted(json.loads(r["value"]))) if r["key"] == "email" else r["value"]} for r in rows]
     return {"columns": cols, "rows": rows, "total": db.scalar(f"SELECT COUNT(*) FROM {table} {where}", args)}
 
 
@@ -1254,6 +1288,11 @@ def health():
         ok = False
     return {"status": "ok" if ok else "degraded", "uptime_sec": round(time.time() - obs.STARTED),
             "projects": len(PROJECTS), "practice": len(PRACTICE), "active": dict(_active)}
+
+
+@app.on_event("startup")
+async def _startup():
+    app.state.email_task = asyncio.create_task(digest.scheduler_loop())
 
 
 @app.on_event("shutdown")

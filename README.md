@@ -194,6 +194,18 @@ The **adaptive guide** turns all of this into next steps:
   as PDF. It covers progress (missions, bosses, remixes), badges collected (overall and per category), coaching notes,
   learning style, robotics concepts and a per-project table. A **JSON** download has the full analytics plus the
   badge progress. Each export is audited.
+- **Weekly email.** Parent Zone → Settings → Weekly email sends each learner's weekly progress through your own
+  SMTP account (for Gmail: `smtp.gmail.com`, port 587, STARTTLS, an app password). It includes:
+  - a badge progress bar, overall and per category, plus the badges earned this week
+  - this week's time, missions, side quests and robot runs
+  - quest progress bars, what's next, and the top coaching notes
+
+  It's off until you enable it, and you pick the day and hour. It sends only while RoboQuest is running; if the app
+  was off at that time, it sends at the next start in the same week. There's **Preview** and **Send test now**.
+  Every send or failure goes to the `email_log` table and the audit log.
+
+  The SMTP password is kept in the local database. It's never shown back in the UI and is masked in the table
+  browser, but a full `.db` backup includes it.
 - **Data.**
   - a catalog of every table (what it holds, row counts, first and last timestamps)
   - a table browser, CSV/JSON export, and a full `.db` backup
