@@ -218,10 +218,10 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
       tab("console");
       show(res);
       $("[data-panel=result]").innerHTML = summaryStrip(res) + `<p class="faint small" style="padding:4px 12px">That was a practice run. ${checkable ? "Press <b>Test my robot</b> to check the goals." : ""}</p>`
-        + (mode === "playground" && res.badge_count ? `<div style="padding:4px 12px 12px;max-width:520px">${badgeProgress(
+        + (res.badge_count ? `<div style="padding:4px 12px 12px;max-width:520px">${badgeProgress(
           Array.from({ length: res.badge_count.total }, (_, i) => ({ earned_at: i < res.badge_count.earned ? 1 : null })))}
-          <p class="faint small" style="margin:0">${res.playground_runs >= 10 ? "🧭 Explorer earned — keep experimenting!"
-            : `${res.playground_runs}/10 playground experiments towards 🧭 Explorer.`}</p></div>` : "");
+          ${mode === "playground" ? `<p class="faint small" style="margin:0">${res.playground_runs >= 10 ? "🧭 Explorer earned — keep experimenting!"
+            : `${res.playground_runs}/10 playground experiments towards 🧭 Explorer.`}</p>` : ""}</div>` : "");
       (res.badges || []).forEach(showBadge);
     } catch (e) {
       toast("Couldn't run: " + esc(e.message));
