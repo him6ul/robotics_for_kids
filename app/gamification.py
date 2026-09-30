@@ -99,6 +99,18 @@ for _p in _PROJECTS:
                                       f"Beat the {_p['title']} boss: {_p['boss']['title']}")
 
 
+# one badge per remix
+REMIX_TITLES = {
+    "hello_robot": "Showbot", "robo_artist": "Gallery Artist", "bat_bot": "Echo Inventor", "robo_vac": "Clean Machine",
+    "line_tracker": "Track Designer", "race_track": "Circuit Creator", "precision_pilot": "Rover Explorer",
+    "delivery_bot": "City Planner", "robot_arm": "Arm Artisan", "warehouse_bot": "Logistics Boss",
+    "maze_master": "Maze Maker", "capstone": "Mission Director",
+}
+for _p in _PROJECTS:
+    BADGES[f"remix_{_p['id']}"] = ("🎛️", REMIX_TITLES.get(_p["id"], f"{_p['title']} Remixer"),
+                                   f"Built your own remix of {_p['title']}")
+
+
 def badge_list(learner_id):
     earned = {r["badge_id"]: r["earned_at"] for r in db.q("SELECT * FROM badges WHERE learner_id=?", (learner_id,))}
     return [{"id": k, "emoji": v[0], "name": v[1], "desc": v[2], "earned_at": earned.get(k)} for k, v in BADGES.items()]
@@ -151,6 +163,9 @@ def evaluate_badges(learner_id, projects):
         earned.add("driver")
     if db.scalar("SELECT COUNT(*) FROM arenas WHERE learner_id=?", L) >= 3:
         earned.add("builder")
+    for r in db.q("SELECT DISTINCT project_id FROM remixes WHERE learner_id=?", L):
+        if f"remix_{r['project_id']}" in BADGES:
+            earned.add(f"remix_{r['project_id']}")
     if db.scalar("SELECT COUNT(DISTINCT project_id) FROM remixes WHERE learner_id=?", L) >= 3:
         earned.add("remixer")
     if db.scalar("SELECT MAX(level) FROM ideas WHERE learner_id=?", L) >= 4:
