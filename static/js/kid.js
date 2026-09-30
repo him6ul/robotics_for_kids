@@ -239,6 +239,12 @@ export async function viewProject(app, pid) {
           <b style="flex:1">${esc(p.boss.title)}</b><span class="pill">+${p.boss.xp} XP</span></a></div>
         <div class="card"><h3>🎛️ Remix lab</h3><p class="muted">${esc(p.remix.prompt)}</p><p class="faint small">Required: build one remix to unlock the next robot. ${ps.remixed ? "✓ Done!" : ""}</p>
           ${ps.complete ? `<a class="btn primary" href="#/remix/${pid}">Open remix lab</a>` : `<button class="btn" disabled>🔒 Finish the missions first</button>`}</div>
+        <div class="card"><h3>Badges</h3>${badgeProgress(state.kidState.badges)}
+          <div class="row" style="gap:6px">${["boss", "remix"].map((k) => {
+            const b = state.kidState.badges.find((x) => x.id === `${k}_${pid}`);
+            return b ? `<span class="pill ${b.earned_at ? "good" : ""}" title="${esc(b.desc)}">${b.earned_at ? "✓" : "○"} ${b.emoji} ${esc(b.name)}</span>` : "";
+          }).join("")}</div>
+          <p class="faint small" style="margin:.5em 0 0">This robot's badges: beat its boss and build a remix to earn them.</p></div>
         ${ps.complete ? `<div class="card"><h3>How was it?</h3><p class="muted">${ps.fun ? `You rated it ${ps.fun}/5 for fun.` : "Tell us how fun and how hard this robot was."}</p>
           <button class="btn" id="rate">${ps.fun ? "Rate again" : "Rate this robot"}</button></div>` : ""}
       </div></div>`;
