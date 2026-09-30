@@ -520,9 +520,12 @@ function ideaComposer(host, pid, onSaved) {
 
 export async function viewIdeas(app) {
   setContext("_ideas", "-");
-  const data = await api(`/api/learners/${state.learner.id}/ideas`);
+  const [data, st] = await Promise.all([api(`/api/learners/${state.learner.id}/ideas`), refreshState()]);
+  const thinker = st.badges.find((b) => b.id === "big_thinker");
   app.innerHTML = `<h1>Idea journal</h1><p class="muted">Every great robot starts as an idea. Write yours down — the meter shows how ambitious it is and what you'll need to learn.</p>
-    <div class="grid g2"><div class="card"><h3>New idea</h3><div data-comp></div></div>
+    <div class="grid g2"><div class="stack"><div class="card"><h3>New idea</h3><div data-comp></div></div>
+      <div class="card"><h3>Badges</h3>${badgeProgress(st.badges)}<p class="faint small" style="margin:0">${thinker?.earned_at
+        ? "💡 Big Thinker earned — dream even bigger!" : "Save an idea rated 🏗️ Architect or higher to earn 💡 Big Thinker."}</p></div></div>
     <div class="card"><h3>Your ideas (${data.ideas.length})</h3><div class="grid">${data.ideas.slice().reverse().map((i) => `<div class="idea">
       <div class="row"><b>${esc(i.analysis.level_name || "")}</b><span class="pill">${i.score}/100</span>
       ${i.status === "built" ? `<span class="pill good">built</span>` : ""}<span class="spacer"></span><span class="faint small">${new Date(i.ts * 1000).toLocaleDateString()}</span></div>
