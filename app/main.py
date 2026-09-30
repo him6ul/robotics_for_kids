@@ -679,6 +679,10 @@ async def run(lid: int, request: Request, body: dict = Body(...)):
                "robot_time": summ.get("time"), "crashes": summ.get("crashes"), "gems": summ.get("gems"),
                "end": res.get("end_reason")}, request)
     res["badges"] = gamification.evaluate_badges(lid, PROJECTS)
+    res["badge_count"] = {"earned": db.scalar("SELECT COUNT(*) FROM badges WHERE learner_id=?", (lid,)),
+                          "total": len(gamification.BADGES)}
+    if mode == "playground":
+        res["playground_runs"] = db.scalar("SELECT COUNT(*) FROM runs WHERE learner_id=? AND mode='playground'", (lid,))
     return res
 
 

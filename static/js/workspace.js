@@ -1,6 +1,6 @@
 // The robot workspace: code editor + arena replay + console / telemetry / results.
 // Used by missions, side quests, the playground and the remix lab.
-import { api, celebrate, el, esc, modal, sfx, state, toast, uiEvent } from "./core.js";
+import { api, badgeProgress, celebrate, el, esc, modal, sfx, state, toast, uiEvent } from "./core.js";
 import { ArenaView } from "./arena.js";
 import { Telemetry } from "./telemetry.js";
 import { createTutor } from "./tutor.js";
@@ -217,7 +217,11 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
       lastRun = { output: res.output, error: res.error, summary: res.summary, end_reason: res.end_reason, hints: res.hints };
       tab("console");
       show(res);
-      $("[data-panel=result]").innerHTML = summaryStrip(res) + `<p class="faint small" style="padding:4px 12px">That was a practice run. ${checkable ? "Press <b>Test my robot</b> to check the goals." : ""}</p>`;
+      $("[data-panel=result]").innerHTML = summaryStrip(res) + `<p class="faint small" style="padding:4px 12px">That was a practice run. ${checkable ? "Press <b>Test my robot</b> to check the goals." : ""}</p>`
+        + (mode === "playground" && res.badge_count ? `<div style="padding:4px 12px 12px;max-width:520px">${badgeProgress(
+          Array.from({ length: res.badge_count.total }, (_, i) => ({ earned_at: i < res.badge_count.earned ? 1 : null })))}
+          <p class="faint small" style="margin:0">${res.playground_runs >= 10 ? "🧭 Explorer earned — keep experimenting!"
+            : `${res.playground_runs}/10 playground experiments towards 🧭 Explorer.`}</p></div>` : "");
       (res.badges || []).forEach(showBadge);
     } catch (e) {
       toast("Couldn't run: " + esc(e.message));
