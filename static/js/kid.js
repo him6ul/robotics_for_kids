@@ -158,7 +158,10 @@ function bindGuide(app) {
 const BADGE_ORDER = ["Quest milestones", "Bosses", "Remixes", "Side quests", "Skills & habits"];
 function badgeSections(badges) {
   return BADGE_ORDER.map((cat) => {
-    const items = badges.filter((b) => (b.category || "Skills & habits") === cat);
+    // earned first (most recent first), then the rest in their original order
+    const items = badges.filter((b) => (b.category || "Skills & habits") === cat)
+      .map((b, i) => [b, i]).sort(([a, i], [b, j]) => (b.earned_at ? 1 : 0) - (a.earned_at ? 1 : 0) || (b.earned_at || 0) - (a.earned_at || 0) || i - j)
+      .map(([b]) => b);
     if (!items.length) return "";
     const got = items.filter((b) => b.earned_at).length;
     return `<div style="margin-top:14px"><div class="row" style="margin-bottom:8px"><b>${esc(cat)}</b>
