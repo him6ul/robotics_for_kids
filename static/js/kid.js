@@ -19,6 +19,11 @@ const project = (id) => state.curriculum.projects.find((p) => p.id === id);
 const progressOf = (pid, sid) => state.kidState?.progress.find((r) => r.project_id === pid && r.step_id === sid);
 const isDone = (pid, sid) => progressOf(pid, sid)?.status === "done";
 const pstatus = (pid) => state.kidState?.projects.find((p) => p.id === pid);
+const isOpen = (pid, sid) => !!state.kidState?.open?.[pid]?.includes(sid);
+function lockedRedirect(pid, why) {
+  toast(`🔒 ${esc(why)}`);
+  location.hash = pid ? `#/project/${pid}` : "#/map";
+}
 const concept = (c) => esc(state.curriculum.concepts[c] || c);
 
 export async function refreshState() {
@@ -188,12 +193,10 @@ export async function viewProject(app, pid) {
   await refreshState();
   const ps = pstatus(pid);
   if (!ps.unlocked) { app.innerHTML = `<div class="card"><h2>🔒 Locked</h2><p>Finish the previous robot first.</p><a class="btn" href="#/map">Back to map</a></div>`; return; }
-  let prevDone = true;
   const stepRows = p.steps.map((s, i) => {
-    const done = isDone(pid, s.id), locked = !prevDone;
-    prevDone = done;
+    const done = isDone(pid, s.id), locked = !isOpen(pid, s.id);
     return `<a class="step-row ${done ? "done" : ""} ${locked ? "locked" : ""}" href="#/code/${pid}/${s.id}">
-      <span class="num">${done ? "✓" : i + 1}</span><div style="flex:1"><b>${esc(s.title)}</b></div>
+      <span class="num">${done ? "✓" : locked ? "🔒" : i + 1}</span><div style="flex:1"><b>${esc(s.title)}</b></div>
       <span class="faint small">${s.concepts.map(concept).join(" · ")}</span><span class="pill">+${s.xp} XP</span></a>`;
   }).join("");
   app.innerHTML = `
@@ -207,7 +210,7 @@ export async function viewProject(app, pid) {
         ${p.build_it ? `<p class="fact"><b>Build it for real:</b> ${esc(p.build_it)}</p>` : ""}</div>
       <div class="stack">
         <div class="card"><h3>👾 Boss challenge</h3><p class="muted">Optional and harder, worth lots of XP. Unlocks when every mission is done.</p>
-          <a class="step-row boss ${ps.complete ? "" : "locked"} ${isDone(pid, "boss") ? "done" : ""}" href="#/code/${pid}/boss"><span class="num">${isDone(pid, "boss") ? "✓" : "👾"}</span>
+          <a class="step-row boss ${isOpen(pid, "boss") ? "" : "locked"} ${isDone(pid, "boss") ? "done" : ""}" href="#/code/${pid}/boss"><span class="num">${isDone(pid, "boss") ? "✓" : "👾"}</span>
           <b style="flex:1">${esc(p.boss.title)}</b><span class="pill">+${p.boss.xp} XP</span></a></div>
         <div class="card"><h3>🎛️ Remix lab</h3><p class="muted">${esc(p.remix.prompt)}</p>
           ${ps.complete ? `<a class="btn primary" href="#/remix/${pid}">Open remix lab</a>` : `<button class="btn" disabled>🔒 Finish the missions first</button>`}</div>
@@ -256,12 +259,14 @@ export async function viewCode(app, pid, sid) {
   setContext(pid, sid);
   await refreshState();
   if (state.isStale?.()) return;
-  if (!pstatus(pid)?.unlocked) { location.hash = `#/project/${pid}`; return; }
+  if (!pstatus(pid)?.unlocked) { lockedRedirect(null, "Finish the previous robot first."); return; }
+  if (!isOpen(pid, sid)) { lockedRedirect(pid, sid === "boss" ? "Finish all five missions to unlock the boss." : "Finish the missions before this one first."); return; }
   const idx = p.steps.findIndex((x) => x.id === sid);
   missionShell(app, {
     crumbs: `<a href="#/map">Map</a> › <a href="#/project/${pid}">${p.emoji} ${esc(p.title)}</a>`,
-    dots: `<div class="stepdots">${p.steps.map((x, i) => `<a href="#/code/${pid}/${x.id}" class="${isDone(pid, x.id) ? "done" : ""} ${x.id === sid ? "cur" : ""}" title="${esc(x.title)}">${i + 1}</a>`).join("")}
-      <a href="#/code/${pid}/boss" class="${isDone(pid, "boss") ? "done" : ""} ${sid === "boss" ? "cur" : ""}" title="Boss">👾</a></div>`,
+    dots: `<div class="stepdots">${[...p.steps.map((x, i) => [x.id, String(i + 1), x.title]), ["boss", "👾", "Boss"]].map(([id, label, title]) => isOpen(pid, id)
+      ? `<a href="#/code/${pid}/${id}" class="${isDone(pid, id) ? "done" : ""} ${id === sid ? "cur" : ""}" title="${esc(title)}">${label}</a>`
+      : `<span class="locked" title="🔒 ${esc(title)} — finish the earlier missions first">🔒</span>`).join("")}</div>`,
     title: `${sid === "boss" ? "Boss: " : `Mission ${idx + 1}: `}${esc(s.title)}`,
     learn: s.learn, task: s.task, goals: (s.goals || []).map(esc), concepts: s.concepts, xp: s.xp,
   });
@@ -373,7 +378,10 @@ export async function viewPractice(app, id) {
     const pr = list.find((x) => x.id === id);
     if (!pr) { app.innerHTML = "<p>Unknown side quest</p>"; return; }
     setContext("_practice", id);
-    await refreshState();
+    const st = await refreshState();
+    const firstWeek = Math.min(99, ...state.curriculum.projects.filter((p) => p.concepts.includes(pr.concept)).map((p) => p.week));
+    const openWeek = Math.max(1, ...st.projects.filter((p) => p.unlocked).map((p) => p.week));
+    if (firstWeek !== 99 && firstWeek > openWeek) { toast(`🔒 This side quest unlocks in week ${firstWeek}.`); location.hash = "#/practice"; return; }
     if (state.isStale?.()) return;
     missionShell(app, {
       crumbs: `<a href="#/practice">Side quests</a> › ${concept(pr.concept)}`,
@@ -497,6 +505,7 @@ export async function viewRemix(app, pid) {
   const p = project(pid);
   setContext(pid, "remix");
   await refreshState();
+  if (!isOpen(pid, "remix")) { lockedRedirect(pid, "Finish all five missions to open the remix lab."); return; }
   const [ideas, list] = await Promise.all([api(`/api/learners/${state.learner.id}/ideas`), api(`/api/learners/${state.learner.id}/arenas`)]);
   const mine = ideas.ideas.filter((i) => i.project_id === pid);
   if (state.isStale?.()) return;

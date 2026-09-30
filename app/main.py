@@ -249,11 +249,31 @@ def learner_state(lid: int):
         "streak": gamification.streak(lid),
         "progress": prog,
         "projects": analytics.project_status(lid),
+        "open": _open_map(lid),
         "badges": gamification.badge_list(lid),
         "guide": {"kid": g["kid"], "path": g["path"], "position": g["position"], "schedule": g["schedule"]},
         "today_minutes": round(db.scalar("SELECT SUM(seconds) FROM time_log WHERE learner_id=? AND day=?",
                                          (lid, dt.date.today().isoformat())) / 60),
     }
+
+
+def _open_map(lid):
+    unlocked = _unlocked_projects(lid)
+    out = {}
+    for p in PROJECTS:
+        if p["id"] not in unlocked:
+            continue
+        done = _done_steps(lid, p["id"])
+        ids = [x["id"] for x in p["steps"]]
+        opened = []
+        for i in ids:
+            opened.append(i)
+            if i not in done:
+                break
+        if all(i in done for i in ids):
+            opened += ["boss", "remix"]
+        out[p["id"]] = opened
+    return out
 
 
 @app.get("/api/learners/{lid}/journey")
@@ -289,17 +309,59 @@ def _unlocked_projects(lid):
     return {p["id"] for p in analytics.project_status(lid) if p["unlocked"]}
 
 
+def _done_steps(lid, project):
+    return {r["step_id"] for r in db.q("SELECT step_id FROM step_progress WHERE learner_id=? AND project_id=? AND status='done'",
+                                       (lid, project))}
+
+
+def _unlocked_week(lid):
+    return max([p["week"] for p in analytics.project_status(lid) if p["unlocked"]] or [1])
+
+
+def step_lock(lid, project, step):
+    """Why this learner can't open project/step yet, or None if it's open. Missions go strictly in order:
+    a project opens when the previous one is finished, mission N when missions 1..N-1 are passed,
+    and the boss / remix when all five missions are done. Side quests open with the week that teaches them."""
+    if project in ("_playground",):
+        return None
+    if project == "_practice":
+        pr = PRACTICE_BY_ID.get(step)
+        if not pr:
+            return None
+        first = min([p["week"] for p in PROJECTS if pr["concept"] in p["concepts"]] or [1])
+        return None if first <= _unlocked_week(lid) else f"This side quest unlocks in week {first}."
+    if project not in BY_ID:
+        return None
+    if project not in _unlocked_projects(lid):
+        return "Finish the previous robot first — then this one unlocks."
+    ids = [x["id"] for x in BY_ID[project]["steps"]]
+    done = _done_steps(lid, project)
+    if step in ("boss", "remix"):
+        return None if all(i in done for i in ids) else "Finish all five missions first."
+    if step in ids:
+        missing = [i for i in ids[:ids.index(step)] if i not in done]
+        if missing:
+            return f"Finish mission {ids.index(missing[0]) + 1} first."
+    return None
+
+
+def require_open(lid, project, step):
+    why = step_lock(lid, project, step)
+    if why:
+        raise HTTPException(403, why)
+
+
 def resolve_arena(lid, ref):
     """ref: 'step:<project>/<step>', 'practice:<id>', 'remix:<project>', 'sandbox:<key>', 'custom:<id>'."""
     kind, _, key = str(ref or "sandbox:open_lab").partition(":")
     if kind == "step":
         pid, _, sid = key.partition("/")
         it = _item(pid, sid)
-        if it:
+        if it and step_lock(lid, pid, sid) is None:
             return copy.deepcopy(it["arena"])
-    elif kind == "practice" and key in PRACTICE_BY_ID:
+    elif kind == "practice" and key in PRACTICE_BY_ID and step_lock(lid, "_practice", key) is None:
         return copy.deepcopy(PRACTICE_BY_ID[key]["arena"])
-    elif kind == "remix" and key in BY_ID:
+    elif kind == "remix" and key in BY_ID and step_lock(lid, key, "remix") is None:
         return copy.deepcopy(BY_ID[key]["remix"]["arena"])
     elif kind == "sandbox" and key in SANDBOX_ARENAS:
         return copy.deepcopy(SANDBOX_ARENAS[key])
@@ -320,8 +382,12 @@ def list_arenas(lid: int):
         if p["id"] not in unlocked:
             continue
         for s in p["steps"] + [p["boss"]]:
+            if step_lock(lid, p["id"], s["id"]):
+                continue
             built_in.append({"ref": f"step:{p['id']}/{s['id']}", "name": f"{p['emoji']} {s['arena'].get('name', s['title'])}",
                              "group": p["title"], "kind": s["arena"].get("type", "drive")})
+        if step_lock(lid, p["id"], "remix"):
+            continue
         built_in.append({"ref": f"remix:{p['id']}", "name": f"{p['emoji']} {p['remix']['arena'].get('name', 'Remix arena')}",
                          "group": p["title"], "kind": p["remix"]["arena"].get("type", "drive")})
     mine = db.q("SELECT id, name, complexity, created_at, updated_at FROM arenas WHERE learner_id=? ORDER BY updated_at DESC", (lid,))
@@ -432,6 +498,7 @@ print("distance ahead:", robot.distance())
 
 @app.get("/api/learners/{lid}/code")
 def get_code(lid: int, project: str, step: str):
+    require_open(lid, project, step)
     row = db.one("SELECT code FROM code_saves WHERE learner_id=? AND project_id=? AND step_id=?", (lid, project, step))
     if row:
         return {"code": row["code"], "source": "saved"}
@@ -554,6 +621,7 @@ async def run(lid: int, request: Request, body: dict = Body(...)):
     _learner(lid)
     project, step, mode = str(body.get("project", "_playground")), str(body.get("step", "main")), str(body.get("mode", "step"))
     code = str(body.get("code", ""))[:MAX_CODE]
+    require_open(lid, project, step)
     if project == "_playground" or step == "remix":
         ref = body.get("arena") or (f"remix:{project}" if step == "remix" else "sandbox:open_lab")
     elif project == "_practice":
@@ -623,6 +691,7 @@ def run_check(source, check, arena):
 async def check(lid: int, request: Request, body: dict = Body(...)):
     _learner(lid)
     project, step, code = body["project"], body["step"], str(body.get("code", ""))[:MAX_CODE]
+    require_open(lid, project, step)
     item = _item(project, step)
     if not item:
         raise HTTPException(404, "Unknown step")
@@ -682,6 +751,7 @@ async def check(lid: int, request: Request, body: dict = Body(...)):
 @app.post("/api/learners/{lid}/hint")
 def hint(lid: int, request: Request, body: dict = Body(...)):
     project, step, level = body["project"], body["step"], int(body.get("level", 1))
+    require_open(lid, project, step)
     item = _item(project, step)
     if not item:
         raise HTTPException(404, "Unknown step")
@@ -792,6 +862,7 @@ async def submit_remix(lid: int, request: Request, body: dict = Body(...)):
     project, code = body["project"], str(body.get("code", ""))[:MAX_CODE]
     if project not in BY_ID:
         raise HTTPException(404, "Unknown project")
+    require_open(lid, project, "remix")
     p = BY_ID[project]
     ref = body.get("arena") or f"remix:{project}"
     arena = resolve_arena(lid, ref)
@@ -1110,6 +1181,7 @@ def tutor_history(lid: int, project: str, step: str):
 async def tutor_chat(lid: int, body: dict = Body(...)):
     _learner(lid)
     project, step = body["project"], body["step"]
+    require_open(lid, project, step)
     item, title = _tutor_target(project, step)
     kind = "error" if body.get("kind") == "error" else "chat"
     return await asyncio.to_thread(_tutor_reply, lambda: tutor.chat(

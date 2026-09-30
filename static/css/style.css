@@ -197,6 +197,7 @@ label { font-weight: 550; }
 .stepdots a:hover { text-decoration: none; border-color: var(--line-strong); }
 .stepdots a.done { background: var(--good); border-color: var(--good); color: #fff; }
 .stepdots a.cur { box-shadow: 0 0 0 2px var(--accent); }
+.stepdots span.locked { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .6rem; background: var(--sunken); border: 1px dashed var(--line-strong); opacity: .7; cursor: not-allowed; }
 .goals { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
 .goals li { display: flex; gap: 8px; align-items: baseline; font-size: .9rem; }
 .goals li::before { content: "○"; color: var(--muted); }
