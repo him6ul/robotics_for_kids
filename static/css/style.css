@@ -324,7 +324,7 @@ aside.tutor header .pix { font-size: 1.3rem; }
 .modal-bg { position: fixed; inset: 0; background: rgba(15, 17, 20, .38); display: grid; place-items: center; z-index: 100; animation: fade .15s; padding: 16px; }
 .modal { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; max-width: 520px; width: 100%; text-align: center;
   box-shadow: 0 20px 60px rgba(0, 0, 0, .18); animation: pop .2s ease-out; max-height: 90vh; overflow-y: auto; }
-.modal .big { font-size: 2.6rem; }
+.modal .big:not(.btn) { font-size: 2.6rem; }
 .modal.wide { max-width: 900px; text-align: left; }
 .xp-pop { font-size: 1.5rem; color: var(--accent); font-weight: 700; }
 .rating { display: flex; gap: 6px; justify-content: center; margin: 6px 0 14px; }

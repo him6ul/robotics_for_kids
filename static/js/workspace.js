@@ -329,7 +329,10 @@ export function rewards(r) {
     setTimeout(() => {
       sfx("level");
       modal(`<div class="big">⬆️</div><h2>Level ${rw.level_up.level}</h2>
-        <p>You are now a <b>${esc(rw.level_up.title)}</b>.</p><button class="btn primary big" data-close>Nice!</button>`);
+        <p>You are now a <b>${esc(rw.level_up.title)}</b>.</p>
+        ${r.badge_count ? `<div style="text-align:left;margin:14px 0">${badgeProgress(
+          Array.from({ length: r.badge_count.total }, (_, i) => ({ earned_at: i < r.badge_count.earned ? 1 : null })))}</div>` : ""}
+        <button class="btn primary big" data-close>Nice!</button>`);
     }, 900);
   }
   document.dispatchEvent(new CustomEvent("xp-changed"));
