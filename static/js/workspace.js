@@ -231,6 +231,10 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
     }
   }
 
+  const badgeBlock = (r) => r.badge_count ? `<div style="padding:4px 12px 12px;max-width:520px">${badgeProgress(
+    Array.from({ length: r.badge_count.total }, (_, i) => ({ earned_at: i < r.badge_count.earned ? 1 : null })))}
+    ${r.rewards?.badges?.length ? `<p class="faint small" style="margin:0">New: ${r.rewards.badges.map((b) => `${b.emoji} ${esc(b.name)}`).join(", ")}</p>` : ""}</div>` : "";
+
   // ---------- check ----------
   async function check() {
     await save();
@@ -242,7 +246,7 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
       tab("result");
       const tests = r.runs ? `<span class="faint small">(${r.runs} test run${r.runs > 1 ? "s" : ""})</span>` : "";
       if (r.passed) {
-        box.innerHTML = `<div class="check-result pass">✓ ${esc(r.message || "Mission complete!")} ${tests}</div>${r.replay ? summaryStrip(r.replay) : ""}`;
+        box.innerHTML = `<div class="check-result pass">✓ ${esc(r.message || "Mission complete!")} ${tests}</div>${r.replay ? summaryStrip(r.replay) : ""}${badgeBlock(r)}`;
         host.closest(".workspace")?.querySelector(".goals")?.classList.add("passed");
         if (r.replay) { show(r.replay, "Test run (passed):"); lastRun = { output: r.replay.output, error: r.replay.error, summary: r.replay.summary, end_reason: r.replay.end_reason }; tab("result"); }
         rewards(r);
@@ -253,7 +257,7 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
           <div class="row" style="margin-top:8px">${r.replay ? `<button class="btn small" data-watch>▶ Watch that test run${r.scenario ? `: ${esc(r.scenario)}` : ""}</button>` : ""}
           ${tutor && r.attempts >= 2 ? `<button class="btn small soft" data-askcheck>Ask Sprocket why</button>` : ""}
           <span class="faint small">Attempt ${r.attempts}. ${r.attempts >= 3 ? "Stuck? Open a hint — that's what they're for." : "Tweak it and test again."}</span></div></div>
-          ${r.replay ? summaryStrip(r.replay) : ""}`;
+          ${r.replay ? summaryStrip(r.replay) : ""}${badgeBlock(r)}`;
         box.querySelector("[data-watch]")?.addEventListener("click", () => {
           show(r.replay, `Replaying the test${r.scenario ? ` "${r.scenario}"` : ""} that didn't pass:`);
           lastRun = { output: r.replay.output, error: r.replay.error, summary: r.replay.summary, end_reason: r.replay.end_reason, hints: r.replay.hints };

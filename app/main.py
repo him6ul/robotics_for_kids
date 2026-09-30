@@ -776,7 +776,9 @@ async def check(lid: int, request: Request, body: dict = Body(...)):
               {"attempt": attempts, "xp": rewards["xp"], "ms": res["duration_ms"], "complexity": code_info["complexity"],
                "tests": res.get("runs"), "scenario": res.get("scenario"), "message": res.get("message", "")[:120]}, request)
     return {**res, "attempts": attempts, "rewards": rewards, "next": nxt, "project_complete": project_complete,
-            "code": code_info, "level": gamification.level_for(gamification.total_xp(lid))}
+            "code": code_info, "level": gamification.level_for(gamification.total_xp(lid)),
+            "badge_count": {"earned": db.scalar("SELECT COUNT(*) FROM badges WHERE learner_id=?", (lid,)),
+                            "total": len(gamification.BADGES)}}
 
 
 @app.post("/api/learners/{lid}/hint")
