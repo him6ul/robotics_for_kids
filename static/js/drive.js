@@ -1,7 +1,8 @@
 // Drive mode: steer the robot with the keyboard (or on-screen buttons) and watch every sensor live.
-import { api, esc, setContext, state, store } from "./core.js";
+import { api, badgeProgress, celebrate, esc, modal, setContext, sfx, state, store } from "./core.js";
 import { ArenaView } from "./arena.js";
-import { badgeProgress, refreshState } from "./kid.js";
+import { refreshState } from "./kid.js";
+import { showBadge } from "./workspace.js";
 
 let session = null;
 export function disposeDrive() {
@@ -33,7 +34,8 @@ export async function viewDrive(app) {
         <div class="row" style="margin-top:6px;justify-content:center"><div class="kv small" data-motors></div></div></div>
       <div class="card"><h3>Live sensors</h3><div class="sensor-grid" data-sensors></div>
         <p class="small muted" style="margin-bottom:0" data-extra></p></div>
-      <div class="card"><h3>This drive</h3><div class="kv" data-summary></div></div>
+      <div class="card"><h3>This drive</h3><div class="kv" data-summary></div>
+        <p style="margin:10px 0 0"><button class="btn" data-end>🏁 End drive</button></p></div>
       <div class="card"><h3>Badges</h3>${badgeProgress(st.badges)}
         <p class="faint small" style="margin:0">${st.badges.find((b) => b.id === "driver")?.earned_at
           ? "🎮 Test Driver earned — nice driving!" : "Drive for 5 minutes in total to earn 🎮 Test Driver."}</p></div>
@@ -54,6 +56,7 @@ export async function viewDrive(app) {
       if (m.t === "arena") view.startLive(m.arena);
       else if (m.t === "state") { view.pushLive(m); panel(m); }
       else if (m.t === "error") app.querySelector("[data-extra]").textContent = m.msg;
+      else if (m.t === "summary") showSummary(m);
     };
   }
   function cmd() {
@@ -103,6 +106,27 @@ export async function viewDrive(app) {
     k.addEventListener("pointerdown", on); k.addEventListener("pointerup", off); k.addEventListener("pointerleave", off);
   });
   app.querySelector("[data-pick]").onchange = (e) => connect(e.target.value);
+  app.querySelector("[data-end]").onclick = () => {
+    keys.clear(); cmd();
+    if (ws?.readyState === 1) ws.send(JSON.stringify({ type: "end" }));
+  };
+  function showSummary(m) {
+    ws = null;
+    sfx(m.new_badges.length ? "badge" : "ok");
+    if (m.new_badges.length) celebrate(0.8);
+    m.new_badges.forEach((b, i) => setTimeout(() => showBadge(b), 400 + i * 600));
+    const d = modal(`<div class="big">🏁</div><h2>Drive complete</h2>
+      <dl class="kv" style="max-width:280px;margin:12px auto;text-align:left">
+        <dt>Time</dt><dd>${Math.round(m.seconds)} s</dd><dt>Distance</dt><dd>${Math.round(m.distance)} cm</dd>
+        <dt>Crashes</dt><dd>${m.crashes}</dd>${m.gems_total ? `<dt>Gems</dt><dd>${m.gems}/${m.gems_total}</dd>` : ""}${m.laps ? `<dt>Laps</dt><dd>${m.laps}</dd>` : ""}
+        ${m.xp ? `<dt>XP</dt><dd>+${m.xp}</dd>` : ""}</dl>
+      <div style="text-align:left;margin:14px 0">${badgeProgress(Array.from({ length: m.badges_total }, (_, i) => ({ earned_at: i < m.badges_earned ? 1 : null })))}
+        <p class="faint small" style="margin:0">${m.new_badges.length ? `New: ${m.new_badges.map((b) => `${b.emoji} ${esc(b.name)}`).join(", ")}`
+          : m.drive_minutes_total >= 5 ? "🎮 Test Driver earned — nice driving!" : `${m.drive_minutes_total} of 5 minutes towards 🎮 Test Driver.`}</p></div>
+      <div class="row" style="justify-content:center"><button class="btn primary" data-again>Drive again</button><a class="btn" href="#/home" data-close>Home</a></div>`);
+    d.node.querySelector("[data-again]").onclick = () => { d.close(); connect(app.querySelector("[data-pick]").value); };
+    refreshState();
+  }
   timer = setInterval(cmd, 250);   // keep-alive / resend current command
   connect(selected);
   session = {

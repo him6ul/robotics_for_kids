@@ -941,7 +941,30 @@ def reflection(lid: int, request: Request, body: dict = Body(...)):
 async def ws_drive(ws: WebSocket):
     await ws.accept()
     lid, sid, world, started = None, None, None, time.time()
-    cmd = {"l": 0.0, "r": 0.0}
+    cmd = {"l": 0.0, "r": 0.0, "end": False}
+
+    def finish():
+        """Save the session once and award XP/badges. Returns the summary (or None if nothing to save)."""
+        nonlocal sid
+        if not sid or world is None:
+            return None
+        this, sid = sid, None
+        secs = round(time.time() - started, 1)
+        gems = sum(1 for g in world.gems if g["got"] is not None)
+        db.ex("UPDATE drive_sessions SET seconds=?, distance=?, crashes=?, gems=? WHERE id=?",
+              (secs, round(world.st["distance"], 1), world.st["crashes"], gems, this))
+        obs.audit(f"learner:{lid}", "drive.end", "drive_session", this,
+                  {"seconds": secs, "distance": round(world.st["distance"], 1), "crashes": world.st["crashes"], "gems": gems})
+        xp = 0
+        if secs >= 60 and not db.scalar("SELECT COUNT(*) FROM xp_log WHERE learner_id=? AND reason=?",
+                                        (lid, f"drive:{dt.date.today()}")):
+            xp = gamification.award_xp(lid, 10, f"drive:{dt.date.today()}")
+        new = gamification.evaluate_badges(lid, PROJECTS)
+        total_secs = db.scalar("SELECT SUM(seconds) FROM drive_sessions WHERE learner_id=?", (lid,))
+        return {"seconds": secs, "distance": round(world.st["distance"], 1), "crashes": world.st["crashes"], "gems": gems,
+                "gems_total": len(world.gems), "laps": world.st["laps"], "xp": xp, "new_badges": new,
+                "badges_earned": db.scalar("SELECT COUNT(*) FROM badges WHERE learner_id=?", (lid,)),
+                "badges_total": len(gamification.BADGES), "drive_minutes_total": round(total_secs / 60, 1)}
     try:
         msg = await ws.receive_json()
         lid = int(msg["learner"])
@@ -969,6 +992,9 @@ async def ws_drive(ws: WebSocket):
                 if m.get("type") == "cmd":
                     cmd["l"] = max(-100.0, min(100.0, float(m.get("l", 0))))
                     cmd["r"] = max(-100.0, min(100.0, float(m.get("r", 0))))
+                elif m.get("type") == "end":
+                    cmd["end"] = True
+                    return
                 elif m.get("type") == "action":
                     a = m.get("a")
                     rb = robosim.Robot(world)
@@ -985,7 +1011,7 @@ async def ws_drive(ws: WebSocket):
         rtask = asyncio.create_task(reader())
         sent_events = 0
         try:
-            while not rtask.done():
+            while not rtask.done() and not cmd["end"]:
                 t0 = time.perf_counter()
                 world.pl, world.pr = cmd["l"], cmd["r"]
                 try:
@@ -1009,6 +1035,10 @@ async def ws_drive(ws: WebSocket):
                 await asyncio.sleep(max(0.0, 0.04 - (time.perf_counter() - t0)))
         finally:
             rtask.cancel()
+        if cmd["end"]:
+            summary = finish()
+            if summary:
+                await ws.send_json({"t": "summary", **summary})
     except WebSocketDisconnect:
         pass
     except HTTPException as e:
@@ -1019,17 +1049,7 @@ async def ws_drive(ws: WebSocket):
     except Exception as e:  # noqa: BLE001
         obs.app_error("ws_drive", e)
     finally:
-        if sid and world is not None:
-            secs = round(time.time() - started, 1)
-            gems = sum(1 for g in world.gems if g["got"] is not None)
-            db.ex("UPDATE drive_sessions SET seconds=?, distance=?, crashes=?, gems=? WHERE id=?",
-                  (secs, round(world.st["distance"], 1), world.st["crashes"], gems, sid))
-            obs.audit(f"learner:{lid}", "drive.end", "drive_session", sid,
-                      {"seconds": secs, "distance": round(world.st["distance"], 1), "crashes": world.st["crashes"], "gems": gems})
-            if secs >= 60 and not db.scalar("SELECT COUNT(*) FROM xp_log WHERE learner_id=? AND reason=?",
-                                            (lid, f"drive:{dt.date.today()}")):
-                gamification.award_xp(lid, 10, f"drive:{dt.date.today()}")
-            gamification.evaluate_badges(lid, PROJECTS)
+        finish()                       # leaving the page without "End drive" still saves the session
         try:
             await ws.close()
         except Exception:  # noqa: BLE001
