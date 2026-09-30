@@ -1,7 +1,9 @@
 // Kid-facing screens.
-import { api, applyTheme, celebrate, chartDefaults, el, esc, fmtMin, makeChart, modal, seriesColors, setContext, sfx, state, store, toast } from "./core.js";
+import { api, applyTheme, badgeProgress, celebrate, chartDefaults, el, esc, fmtMin, makeChart, modal, seriesColors, setContext, sfx, state, store, toast } from "./core.js";
 import { createWorkspace, rewards, showBadge } from "./workspace.js";
 import { closeManual, manualHTML } from "./manual.js";
+
+export { badgeProgress };
 
 const AVATARS = ["🤖", "🦾", "🛸", "🚀", "🦊", "🐙", "🦉", "🐧", "🦖", "🐢", "🦈", "🐝"];
 const ROBOT_COLORS = ["#5b8def", "#5f9b76", "#c98a52", "#8f74a8", "#c0625c", "#5d8f96", "#8d9197", "#b89a4a"];
@@ -167,13 +169,6 @@ function badgeSections(badges) {
     return `<div style="margin-top:14px"><div class="row" style="margin-bottom:8px"><b>${esc(cat)}</b>
       <span class="pill ${got === items.length ? "good" : ""}">${got}/${items.length}</span></div>${badgeGrid(items)}</div>`;
   }).join("");
-}
-
-export function badgeProgress(badges) {
-  const got = badges.filter((b) => b.earned_at).length, total = badges.length;
-  return `<div style="margin-bottom:12px"><div class="row"><span class="muted small">Badges collected</span><span class="spacer"></span>
-    <b class="small">${got}/${total}</b></div>
-    <div class="progress" style="margin-top:5px" title="${Math.round(got / total * 100)}% of all badges"><i style="width:${total ? got / total * 100 : 0}%"></i></div></div>`;
 }
 
 function badgeGrid(badges, onlyEarned = false) {

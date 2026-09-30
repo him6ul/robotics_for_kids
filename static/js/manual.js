@@ -1,5 +1,5 @@
 // The Robot Manual: every command the robot and arm understand, unlocked week by week.
-import { el, esc, state, uiEvent } from "./core.js";
+import { badgeProgress, el, esc, state, uiEvent } from "./core.js";
 
 export const API = [
   // group, signature, description, week
@@ -65,7 +65,7 @@ export function toggleManual() {
   if (open) { open.remove(); open = null; return; }
   uiEvent("manual.open", state.context.project + "/" + state.context.step);
   open = el(`<aside class="drawer"><header><b>📘 Robot manual</b><span class="spacer"></span><button class="iconbtn" data-x>✕</button></header>
-    <div class="body">${manualHTML(true)}</div></aside>`);
+    <div class="body">${state.kidState?.badges ? `<div style="margin-bottom:12px">${badgeProgress(state.kidState.badges)}</div>` : ""}${manualHTML(true)}</div></aside>`);
   open.querySelector("[data-x]").onclick = toggleManual;
   document.body.appendChild(open);
 }

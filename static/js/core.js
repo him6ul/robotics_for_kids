@@ -173,3 +173,11 @@ export function makeChart(canvas, config) {
   return c;
 }
 export function destroyCharts() { charts.forEach((c) => c.destroy()); charts.clear(); }
+
+// ---------- badge progress bar (shared by many pages) ----------
+export function badgeProgress(badges) {
+  const got = badges.filter((b) => b.earned_at).length, total = badges.length;
+  return `<div style="margin-bottom:12px"><div class="row"><span class="muted small">Badges collected</span><span class="spacer"></span>
+    <b class="small">${got}/${total}</b></div>
+    <div class="progress" style="margin-top:5px" title="${Math.round(got / total * 100)}% of all badges"><i style="width:${total ? got / total * 100 : 0}%"></i></div></div>`;
+}
