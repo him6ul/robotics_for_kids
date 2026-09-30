@@ -18,7 +18,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Request, WebSocket, W
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import analysis, analytics, db, gamification, tutor
+from . import analysis, analytics, db, gamification, report, tutor
 from . import observability as obs
 from .curriculum import BY_ID, PRACTICE, PRACTICE_BY_ID, PROJECTS
 from .curriculum import step as find_step
@@ -1026,6 +1026,23 @@ def parent_report(lid: int, request: Request, _=Depends(parent_required)):
     _learner(lid)
     obs.audit("parent", "report.view", "learner", lid, request=request)
     return analytics.full_report(lid)
+
+
+@app.get("/api/parent/report/{lid}/export.{fmt}")
+def parent_report_export(lid: int, fmt: str, request: Request, _=Depends(parent_required)):
+    """Downloadable report: a printable HTML page, or the full analytics as JSON (both include badge progress)."""
+    if fmt not in ("html", "json"):
+        raise HTTPException(404)
+    learner = _learner(lid)
+    r = analytics.full_report(lid)
+    r["badge_progress"] = report.badge_progress(r["badges"])
+    obs.audit("parent", "report.export", "learner", lid, {"format": fmt}, request)
+    name = f"roboquest-report-{learner['name'].lower().replace(' ', '-')}-{dt.date.today()}.{fmt}"
+    if fmt == "json":
+        return Response(json.dumps(r, default=str, indent=1), media_type="application/json",
+                        headers={"Content-Disposition": f"attachment; filename={name}"})
+    return Response(report.render(r), media_type="text/html",
+                    headers={"Content-Disposition": f"inline; filename={name}"})
 
 
 @app.get("/api/parent/timeline/{lid}")

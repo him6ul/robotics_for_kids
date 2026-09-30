@@ -190,6 +190,10 @@ The **adaptive guide** turns all of this into next steps:
   - AI tutor latency, tokens and errors
 
   Metrics are rolled up per minute into SQLite for history charts.
+- **Report export.** Parent Zone → Overview → **Printable report** opens one self-contained page you can print or save
+  as PDF. It covers progress (missions, bosses, remixes), badges collected (overall and per category), coaching notes,
+  learning style, robotics concepts and a per-project table. A **JSON** download has the full analytics plus the
+  badge progress. Each export is audited.
 - **Data.**
   - a catalog of every table (what it holds, row counts, first and last timestamps)
   - a table browser, CSV/JSON export, and a full `.db` backup

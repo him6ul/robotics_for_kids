@@ -93,6 +93,10 @@ async function overview(body) {
         <div class="row" style="margin-top:6px"><span class="faint" style="width:70px">Plan</span><div class="progress" style="flex:1"><i style="width:${s.expected_pct}%;background:var(--muted)"></i></div></div>
         ${badgeBar(r.badges)}
         <h3 style="margin-top:18px">Learner profile: ${st.persona.emoji} ${esc(st.persona.name)}</h3><p class="muted">${esc(st.persona.desc)}</p></div>
+      <div class="card"><div class="card-head"><h3>Report</h3><span class="spacer"></span>
+        <a class="btn small primary" href="/api/parent/report/${sel}/export.html" target="_blank" rel="noopener">⬇ Printable report</a>
+        <a class="btn small" href="/api/parent/report/${sel}/export.json">JSON</a></div>
+        <p class="muted small" style="margin:0">Progress, badges collected, coaching notes, learning style, concepts and projects — print it or save as PDF.</p></div>
       <div class="card"><h3>Top coaching notes</h3>${r.guide.parent.slice(0, 4).map(note).join("") || `<p class="muted">Nothing needs your attention right now. 👍</p>`}
         <p><a href="#/parent/guide">All notes →</a></p></div>
     </div>
