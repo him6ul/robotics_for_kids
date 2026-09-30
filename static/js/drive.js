@@ -1,7 +1,7 @@
 // Drive mode: steer the robot with the keyboard (or on-screen buttons) and watch every sensor live.
 import { api, esc, setContext, state, store } from "./core.js";
 import { ArenaView } from "./arena.js";
-import { refreshState } from "./kid.js";
+import { badgeProgress, refreshState } from "./kid.js";
 
 let session = null;
 export function disposeDrive() {
@@ -17,7 +17,7 @@ const SENSORS = [
 
 export async function viewDrive(app) {
   setContext("_drive", "-");
-  await refreshState();
+  const st = await refreshState();
   const list = await api(`/api/learners/${state.learner.id}/arenas`);
   const drivable = [...list.mine.map((a) => ({ ...a, group: "My arenas", kind: "drive" })), ...list.built_in].filter((a) => a.kind !== "arm");
   const selected = store.get("rq_drive_arena", "sandbox:sensor_park");
@@ -34,6 +34,9 @@ export async function viewDrive(app) {
       <div class="card"><h3>Live sensors</h3><div class="sensor-grid" data-sensors></div>
         <p class="small muted" style="margin-bottom:0" data-extra></p></div>
       <div class="card"><h3>This drive</h3><div class="kv" data-summary></div></div>
+      <div class="card"><h3>Badges</h3>${badgeProgress(st.badges)}
+        <p class="faint small" style="margin:0">${st.badges.find((b) => b.id === "driver")?.earned_at
+          ? "🎮 Test Driver earned — nice driving!" : "Drive for 5 minutes in total to earn 🎮 Test Driver."}</p></div>
     </aside></div>`;
   const view = new ArenaView(app.querySelector("[data-arena]"));
   const keys = new Set();

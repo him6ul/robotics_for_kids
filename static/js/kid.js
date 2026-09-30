@@ -169,7 +169,7 @@ function badgeSections(badges) {
   }).join("");
 }
 
-function badgeProgress(badges) {
+export function badgeProgress(badges) {
   const got = badges.filter((b) => b.earned_at).length, total = badges.length;
   return `<div style="margin-bottom:12px"><div class="row"><span class="muted small">Badges collected</span><span class="spacer"></span>
     <b class="small">${got}/${total}</b></div>
