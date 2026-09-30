@@ -65,7 +65,7 @@ Every project follows the same loop:
 3. **✓ Test my robot.** Automated tests run his program in 2–5 different arenas or starting positions, so hard-coded
    moves don't pass. If a test fails, he gets a coaching message with numbers and can **watch the exact test run**
    that failed.
-4. **Boss challenge**: harder and optional, for big XP.
+4. **Boss challenge**: the harder final test for each robot, worth big XP. It's required: the next robot unlocks only after the boss is beaten.
 5. **Remix lab**: he writes an idea into the idea-o-meter, builds his own twist (in any arena, including ones he
    designed), and earns XP scaled by how much more complex it is than the original.
 6. **Reflection**: he rates how fun and how hard it was, which feeds the guide.

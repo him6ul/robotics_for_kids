@@ -45,7 +45,8 @@ def project_status(learner_id, prog=None):
             "fun": reflection["fun"] if reflection else None,
             "difficulty": reflection["difficulty"] if reflection else None,
         })
-        unlocked = unlocked and complete
+        # the next robot unlocks only after all five missions AND the boss are beaten
+        unlocked = unlocked and complete and bool(boss and boss["status"] == "done")
     return out
 
 
@@ -53,12 +54,13 @@ def current_position(learner_id, statuses=None, prog=None):
     prog = prog or _progress(learner_id)
     statuses = statuses or project_status(learner_id, prog)
     for ps in statuses:
-        if not ps["complete"]:
+        if not (ps["complete"] and ps["boss_done"]):
             p = next(x for x in PROJECTS if x["id"] == ps["id"])
-            for s in p["steps"]:
+            for s in p["steps"] + [p["boss"]]:
                 r = prog.get((p["id"], s["id"]))
                 if not r or r["status"] != "done":
-                    return {"project": p["id"], "step": s["id"], "project_title": p["title"], "step_title": s["title"],
+                    title = f"Boss: {s['title']}" if s["id"] == "boss" else s["title"]
+                    return {"project": p["id"], "step": s["id"], "project_title": p["title"], "step_title": title,
                             "week": p["week"]}
     return None
 
@@ -465,10 +467,7 @@ def guide(learner_id):
         proj = next(p for p in PROJECTS if p["id"] == last_done["id"])
         fast = last_done["seconds"] and last_done["seconds"] < last_done["expected_seconds"] * 0.9
         clean = last_done["steps_total"] and last_done["first_try"] / last_done["steps_total"] >= 0.5
-        if not last_done["boss_done"] and (fast or clean):
-            add(kid, "boss", f"Boss challenge: {proj['boss']['title']}",
-                f"You crushed {proj['title']}. Ready for its boss?", 75,
-                {"type": "step", "project": proj["id"], "step": "boss"}, "👾")
+        # (the boss is required now, so "Continue" already points at it — no separate suggestion)
         if not last_done["remixed"]:
             add(kid, "remix", f"Remix {proj['title']}", proj["remix"]["prompt"], 60,
                 {"type": "remix", "project": proj["id"]}, "🎛️")

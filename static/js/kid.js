@@ -167,7 +167,7 @@ function questMap(s) {
       const p = project(ps.id);
       if (!p) return "";
       const cls = !ps.unlocked ? "locked" : ps.complete ? "complete" : pos && pos.project === ps.id ? "current" : "";
-      return `<a class="proj ${cls}" ${ps.unlocked ? `href="#/project/${ps.id}"` : ""} title="${ps.unlocked ? "" : "Finish the previous robot to unlock"}">
+      return `<a class="proj ${cls}" ${ps.unlocked ? `href="#/project/${ps.id}"` : ""} title="${ps.unlocked ? "" : "Finish the previous robot and beat its boss to unlock"}">
         <div class="pe">${ps.unlocked ? p.emoji : "🔒"}</div>
         <div style="flex:1;min-width:0"><b>${esc(p.title)}</b><div class="faint small">${esc(p.tagline)}</div>
         <div class="progress" style="margin-top:8px"><i style="width:${(ps.steps_done / ps.steps_total) * 100}%"></i></div></div>
@@ -179,7 +179,7 @@ export async function viewMap(app) {
   setContext("_home", "map");
   const s = await refreshState();
   const side = s.guide.kid.filter((r) => r.kind === "practice");
-  app.innerHTML = `<h1>Quest map</h1><p class="muted">Twelve robots over six weeks. Each one unlocks the next. ✓ built · 👾 boss beaten · 🎛️ remixed</p>
+  app.innerHTML = `<h1>Quest map</h1><p class="muted">Twelve robots over six weeks. Beat a robot's boss to unlock the next one. ✓ missions done · 👾 boss beaten · 🎛️ remixed</p>
     ${side.length ? `<div class="card" style="margin-bottom:16px"><h3>Recommended side quests</h3><div class="row">${side.map((r) =>
       `<a class="btn small" href="#/practice/${r.action.id}">${esc(r.title.replace("Side quest: ", ""))}</a>`).join("")}</div></div>` : ""}
     ${questMap(s)}`;
@@ -209,7 +209,7 @@ export async function viewProject(app, pid) {
         ${p.real_world ? `<p class="fact" style="margin-top:14px"><b>Real robots:</b> ${esc(p.real_world)}</p>` : ""}
         ${p.build_it ? `<p class="fact"><b>Build it for real:</b> ${esc(p.build_it)}</p>` : ""}</div>
       <div class="stack">
-        <div class="card"><h3>👾 Boss challenge</h3><p class="muted">Optional and harder, worth lots of XP. Unlocks when every mission is done.</p>
+        <div class="card"><h3>👾 Boss challenge</h3><p class="muted">The final test for this robot, worth lots of XP. Unlocks when every mission is done — beat it to unlock the next robot.</p>
           <a class="step-row boss ${isOpen(pid, "boss") ? "" : "locked"} ${isDone(pid, "boss") ? "done" : ""}" href="#/code/${pid}/boss"><span class="num">${isDone(pid, "boss") ? "✓" : "👾"}</span>
           <b style="flex:1">${esc(p.boss.title)}</b><span class="pill">+${p.boss.xp} XP</span></a></div>
         <div class="card"><h3>🎛️ Remix lab</h3><p class="muted">${esc(p.remix.prompt)}</p>
@@ -259,7 +259,7 @@ export async function viewCode(app, pid, sid) {
   setContext(pid, sid);
   await refreshState();
   if (state.isStale?.()) return;
-  if (!pstatus(pid)?.unlocked) { lockedRedirect(null, "Finish the previous robot first."); return; }
+  if (!pstatus(pid)?.unlocked) { lockedRedirect(null, "Finish the previous robot and beat its boss first."); return; }
   if (!isOpen(pid, sid)) { lockedRedirect(pid, sid === "boss" ? "Finish all five missions to unlock the boss." : "Finish the missions before this one first."); return; }
   const idx = p.steps.findIndex((x) => x.id === sid);
   missionShell(app, {
@@ -362,10 +362,10 @@ export function reflect(pid, thenRoute = false) {
     if (r.xp) toast(`+${r.xp} XP for reflecting`);
     document.dispatchEvent(new CustomEvent("xp-changed"));
     if (thenRoute) {
-      const m2 = modal(`<h2>What next?</h2><div class="grid" style="margin-top:12px">
-        <a class="btn primary big" href="#/code/${pid}/boss">👾 Take on the boss</a>
-        <a class="btn big" href="#/remix/${pid}">🎛️ Remix it your way</a>
-        <a class="btn big" href="#/map">Next robot →</a></div>`);
+      const bossDone = isDone(pid, "boss");
+      const m2 = modal(`<h2>What next?</h2>${bossDone ? "" : `<p class="muted">Beat the boss to unlock the next robot.</p>`}<div class="grid" style="margin-top:12px">
+        ${bossDone ? `<a class="btn primary big" href="#/map">Next robot →</a>` : `<a class="btn primary big" href="#/code/${pid}/boss">👾 Take on the boss</a>`}
+        <a class="btn big" href="#/remix/${pid}">🎛️ Remix it your way</a></div>`);
       m2.node.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => m2.close()));
     }
   };

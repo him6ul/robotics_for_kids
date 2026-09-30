@@ -333,7 +333,7 @@ def step_lock(lid, project, step):
     if project not in BY_ID:
         return None
     if project not in _unlocked_projects(lid):
-        return "Finish the previous robot first — then this one unlocks."
+        return "Finish the previous robot (all missions and its boss) first — then this one unlocks."
     ids = [x["id"] for x in BY_ID[project]["steps"]]
     done = _done_steps(lid, project)
     if step in ("boss", "remix"):
