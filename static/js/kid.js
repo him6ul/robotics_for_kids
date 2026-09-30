@@ -468,7 +468,10 @@ export async function viewPlayground(app, ref) {
       ["Tune player", "notes = [523, 587, 659, 523, 659, 587, 523]\nfor n in notes:\n    robot.beep(n, 0.25)\n    robot.wait(0.3)\n"],
       ["Sensor print-out", "for i in range(10):\n    print(robot.time(), robot.distance(), robot.floor(), robot.heading())\n    robot.forward(10)\n"],
     ].map(([t, c]) => `<div class="guide-item"><div style="flex:1"><b>${t}</b></div><button class="btn small" data-code="${esc(c)}">Load</button></div>`).join("")}</div>
-    <p class="small" style="margin-top:10px"><a href="#/builder">Design your own arena →</a></p>`,
+    <p class="small" style="margin-top:10px"><a href="#/builder">Design your own arena →</a></p>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">${badgeProgress(state.kidState.badges)}
+      <p class="faint small" style="margin:0">${state.kidState.badges.find((b) => b.id === "explorer")?.earned_at
+        ? "🧭 Explorer earned — keep experimenting!" : "Run 10 experiments here to earn 🧭 Explorer."}</p></div>`,
     hintBox: false,
   });
   disposeWorkspace();
