@@ -1,0 +1,8 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "roboquest", "runtimeExecutable": ".venv/bin/uvicorn", "runtimeArgs": ["app.main:app", "--host", "127.0.0.1", "--port", "8770"], "port": 8770 },
+    { "name": "roboquest-demo", "runtimeExecutable": "env",
+      "runtimeArgs": ["ROBOQUEST_TUTOR_FAKE=1", "ROBOQUEST_DB=data/demo.db", ".venv/bin/uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8771"], "port": 8771 }
+  ]
+}

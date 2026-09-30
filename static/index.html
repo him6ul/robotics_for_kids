@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoboQuest</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2350709e'/><text x='50' y='68' font-size='52' text-anchor='middle'>🤖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    // apply the saved theme before first paint (no flash)
+    try {
+      const t = localStorage.getItem("rq_theme") || "system", a = localStorage.getItem("rq_accent") || "blue";
+      const dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      document.documentElement.dataset.accent = a;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header id="topbar" class="hidden">
+    <a href="#/home" class="brand"><span class="mark">R</span> RoboQuest</a>
+    <nav id="kidnav">
+      <a href="#/home" data-nav="home">Home</a>
+      <a href="#/map" data-nav="map">Quest map</a>
+      <a href="#/practice" data-nav="practice">Side quests</a>
+      <a href="#/playground" data-nav="playground">Playground</a>
+      <a href="#/drive" data-nav="drive">Drive</a>
+      <a href="#/builder" data-nav="builder">Arena builder</a>
+      <a href="#/ideas" data-nav="ideas">Ideas</a>
+      <a href="#/journey" data-nav="journey">My journey</a>
+      <a href="#/manual" data-nav="manual">Manual</a>
+    </nav>
+    <div class="topright">
+      <div id="xpchip" class="chip xpchip" title="Your level"></div>
+      <div id="streakchip" class="chip" title="Day streak"></div>
+      <button id="soundbtn" class="iconbtn" title="Sound on/off">🔊</button>
+      <button id="themebtn" class="iconbtn" title="Light / dark">◐</button>
+      <a href="#/parent" class="iconbtn" title="Parent zone">👪</a>
+      <button id="whoami" class="avatarbtn" title="Switch learner"></button>
+    </div>
+  </header>
+  <main id="app"></main>
+  <div id="modal-root"></div>
+  <div id="toasts"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
