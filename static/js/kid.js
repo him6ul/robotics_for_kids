@@ -432,11 +432,23 @@ export async function viewPractice(app, id) {
       concepts: [pr.concept], xp: pr.xp,
     });
     if (isDone("_practice", id)) app.querySelector(".goals")?.classList.add("passed");
+    app.querySelector(".mission").insertAdjacentHTML("beforeend", `<div class="card" data-badgecard></div>`);
+    const renderQuestBadges = () => {
+      const done = list.filter((p) => isDone("_practice", p.id)).length, total = list.length;
+      const half = state.kidState.badges.find((b) => b.id === "practice_half"), pro = state.kidState.badges.find((b) => b.id === "practice_pro");
+      app.querySelector("[data-badgecard]").innerHTML = `<h3>Badges</h3>${badgeProgress(state.kidState.badges)}
+        <div class="row"><span class="muted small">Side quests cleared</span><span class="spacer"></span><b class="small">${done}/${total}</b></div>
+        <div class="progress" style="margin-top:5px"><i style="width:${total ? done / total * 100 : 0}%"></i></div>
+        <p class="faint small" style="margin:.5em 0 0">${pro?.earned_at ? "🥋 Practice Pro earned!" : half?.earned_at ? `${total - done} more for 🥋 Practice Pro.`
+          : `${Math.max(0, 21 - done)} more for 🗡️ Halfway Hero.`}</p>`;
+    };
+    renderQuestBadges();
     disposeWorkspace();
     currentWs = createWorkspace(app.querySelector("[data-ws]"), {
       project: "_practice", step: id, mode: "practice",
       onPassed: async () => {
         await refreshState();
+        renderQuestBadges();
         app.querySelector("[data-panel=result]").insertAdjacentHTML("beforeend", `<div class="row" style="padding:0 12px 12px"><a class="btn primary" href="#/practice">More side quests</a><a class="btn" href="#/home">Home</a></div>`);
       },
     });
