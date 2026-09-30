@@ -594,6 +594,14 @@ export async function viewRemix(app, pid) {
       <p style="margin-top:14px"><b>2. Build it, then submit.</b> <span class="muted">Pick any arena (your own designs earn a bonus). Bigger remixes earn more XP.</span></p><div data-remixres></div>`,
     hintBox: false,
   });
+  app.querySelector(".mission").insertAdjacentHTML("beforeend", `<div class="card" data-badgecard></div>`);
+  const renderRemixBadges = () => {
+    const b = state.kidState.badges.find((x) => x.id === `remix_${pid}`);
+    app.querySelector("[data-badgecard]").innerHTML = `<h3>Badges</h3>${badgeProgress(state.kidState.badges)}${b
+      ? `<span class="pill ${b.earned_at ? "good" : ""}" title="${esc(b.desc)}">${b.earned_at ? "✓" : "○"} ${b.emoji} ${esc(b.name)}</span>
+         <p class="faint small" style="margin:.5em 0 0">${b.earned_at ? "Remix badge earned!" : "Submit an accepted remix to earn this robot's remix badge."}</p>` : ""}`;
+  };
+  renderRemixBadges();
   let ideaId = mine.length ? mine[mine.length - 1].id : null;
   ideaComposer(app.querySelector("[data-comp]"), pid, (r) => { ideaId = r.id; });
   disposeWorkspace();
@@ -610,6 +618,8 @@ export async function viewRemix(app, pid) {
       ${r.xp ? `<br><b>+${r.xp} XP</b>` : "<br><span class='muted'>(Make it even bigger to earn more XP.)</span>"}</div>`;
     r.badges.forEach(showBadge);
     document.dispatchEvent(new CustomEvent("xp-changed"));
+    await refreshState();
+    renderRemixBadges();
   };
 }
 
