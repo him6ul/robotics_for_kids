@@ -431,6 +431,7 @@ export async function viewPractice(app, id) {
   const weeks = [...new Set(list.map((p) => p.week))].sort((a, b) => a - b);
   app.innerHTML = `<h1>Side quests</h1><p class="muted">Short challenges to sharpen one skill. Every side quest in a week must be done
     (in any order) before the next week unlocks. The ones your guide recommends are marked ★.</p>
+    ${questBadges(s, list)}
     <div class="weeks">${weeks.map((w) => {
       const items = list.filter((p) => p.week === w), q = s.week_quests?.[w] || { done: 0, total: items.length };
       const locked = w > openWeek;
@@ -442,6 +443,19 @@ export async function viewPractice(app, id) {
           <div style="flex:1;min-width:0"><b>${esc(p.title)} ${rec.has(p.id) ? "★" : ""}</b><div class="faint small">${concept(p.concept)}</div></div>
           <span class="faint small">${"★".repeat(p.difficulty)}</span></a>`).join("")}</div>`}</div>`;
     }).join("")}</div>`;
+}
+
+function questBadges(s, list) {
+  const done = list.filter((p) => isDone("_practice", p.id)).length, total = list.length;
+  const half = s.badges.find((b) => b.id === "practice_half"), pro = s.badges.find((b) => b.id === "practice_pro");
+  const line = pro?.earned_at ? "🥋 Practice Pro earned — every side quest cleared!"
+    : half?.earned_at ? `🗡️ Halfway Hero earned. ${total - done} more for 🥋 Practice Pro.`
+    : `${Math.max(0, 21 - done)} more for 🗡️ Halfway Hero · ${total - done} more for 🥋 Practice Pro.`;
+  return `<div class="card" style="margin-bottom:16px"><div class="grid g2" style="gap:18px">
+    <div>${badgeProgress(s.badges)}</div>
+    <div><div class="row"><span class="muted small">Side quests cleared</span><span class="spacer"></span><b class="small">${done}/${total}</b></div>
+      <div class="progress" style="margin-top:5px"><i style="width:${total ? done / total * 100 : 0}%"></i></div>
+      <p class="faint small" style="margin:.5em 0 0">${line}</p></div></div></div>`;
 }
 
 // ---------------------------------------------------------------- playground
