@@ -302,6 +302,8 @@ export async function viewCode(app, pid, sid) {
     learn: s.learn, task: s.task, goals: (s.goals || []).map(esc), concepts: s.concepts, xp: s.xp,
   });
   if (isDone(pid, sid)) app.querySelector(".goals")?.classList.add("passed");
+  app.querySelector(".mission").insertAdjacentHTML("beforeend", `<div class="card" data-badgecard></div>`);
+  missionBadges(app, pid, sid);
   disposeWorkspace();
   currentWs = createWorkspace(app.querySelector("[data-ws]"), { project: pid, step: sid, mode: "step", onPassed: (r) => afterPass(app, p, s, r) });
   setupHints(app, pid, sid, s.hint_count);
@@ -353,9 +355,19 @@ function showSolution(box, code) {
   box.appendChild(b);
 }
 
+function missionBadges(app, pid, sid) {
+  const host = app.querySelector("[data-badgecard]");
+  if (!host) return;
+  const boss = sid === "boss" ? state.kidState.badges.find((b) => b.id === `boss_${pid}`) : null;
+  host.innerHTML = `<h3>Badges</h3>${badgeProgress(state.kidState.badges)}${boss
+    ? `<span class="pill ${boss.earned_at ? "good" : ""}" title="${esc(boss.desc)}">${boss.earned_at ? "✓" : "○"} ${boss.emoji} ${esc(boss.name)}</span>
+       <p class="faint small" style="margin:.5em 0 0">${boss.earned_at ? "Boss badge earned!" : "Beat this boss to earn its badge."}</p>` : ""}`;
+}
+
 async function afterPass(app, p, s, r) {
   app.querySelector(".stepdots a.cur")?.classList.add("done");
   await refreshState();
+  missionBadges(app, p.id, s.id);
   const box = app.querySelector("[data-panel=result]");
   if (r.project_complete) {
     setTimeout(() => {
