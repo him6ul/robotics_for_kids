@@ -111,9 +111,25 @@ for _p in _PROJECTS:
                                    f"Built your own remix of {_p['title']}")
 
 
+BADGE_CATEGORIES = ["Quest milestones", "Bosses", "Remixes", "Side quests", "Skills & habits"]
+
+
+def badge_category(badge_id):
+    if badge_id.startswith("week_") or badge_id in ("first_run", "first_step", "first_project"):
+        return "Quest milestones"
+    if badge_id.startswith("boss_"):
+        return "Bosses"
+    if badge_id.startswith("remix") :
+        return "Remixes"
+    if badge_id.startswith("practice_"):
+        return "Side quests"
+    return "Skills & habits"
+
+
 def badge_list(learner_id):
     earned = {r["badge_id"]: r["earned_at"] for r in db.q("SELECT * FROM badges WHERE learner_id=?", (learner_id,))}
-    return [{"id": k, "emoji": v[0], "name": v[1], "desc": v[2], "earned_at": earned.get(k)} for k, v in BADGES.items()]
+    return [{"id": k, "emoji": v[0], "name": v[1], "desc": v[2], "earned_at": earned.get(k), "category": badge_category(k)}
+            for k, v in BADGES.items()]
 
 
 def evaluate_badges(learner_id, projects):

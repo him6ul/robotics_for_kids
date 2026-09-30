@@ -155,6 +155,17 @@ function bindGuide(app) {
   });
 }
 
+const BADGE_ORDER = ["Quest milestones", "Bosses", "Remixes", "Side quests", "Skills & habits"];
+function badgeSections(badges) {
+  return BADGE_ORDER.map((cat) => {
+    const items = badges.filter((b) => (b.category || "Skills & habits") === cat);
+    if (!items.length) return "";
+    const got = items.filter((b) => b.earned_at).length;
+    return `<div style="margin-top:14px"><div class="row" style="margin-bottom:8px"><b>${esc(cat)}</b>
+      <span class="pill ${got === items.length ? "good" : ""}">${got}/${items.length}</span></div>${badgeGrid(items)}</div>`;
+  }).join("");
+}
+
 function badgeGrid(badges, onlyEarned = false) {
   if (onlyEarned && !badges.length) return `<p class="faint">No badges yet — run your first robot program to earn one.</p>`;
   return `<div class="badge-grid">${badges.map((b) => `<div class="badge ${b.earned_at ? "" : "locked"}" title="${esc(b.desc)}">
@@ -585,8 +596,14 @@ export async function viewJourney(app) {
         <div><b>${e ? esc(m.name) : "???"}</b> ${e?.defeated ? "✓" : ""}<div class="faint small">${e ? `Met ${e.count}× · ` + esc(m.desc) : "Not met yet"}</div></div></div>`; }).join("")}</div></div>
     <div class="grid g2" style="margin-top:16px">
       <div class="card"><h3>Idea power</h3>${j.ideas.ideas.length ? `<div class="chart-box short"><canvas id="c-ideas"></canvas></div>` : `<p class="faint">Save ideas in your <a href="#/ideas">journal</a> to see your idea power grow.</p>`}</div>
-      <div class="card"><h3>All badges (${s.badges.filter((b) => b.earned_at).length}/${s.badges.length})</h3>${badgeGrid(s.badges)}</div>
-    </div>`;
+      <div class="card"><h3>Robot time</h3><dl class="kv"><dt>Robots built</dt><dd>${s.projects.filter((p) => p.complete).length}/${s.projects.length}</dd>
+        <dt>Bosses beaten</dt><dd>${s.projects.filter((p) => p.boss_done).length}/${s.projects.length}</dd>
+        <dt>Remixes built</dt><dd>${s.projects.filter((p) => p.remixed).length}/${s.projects.length}</dd>
+        <dt>Side quests</dt><dd>${Object.values(s.week_quests || {}).reduce((a, q) => a + q.done, 0)}/${state.curriculum.practice.length}</dd></dl></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-head"><h3>Badges</h3><span class="spacer"></span>
+      <span class="pill">${s.badges.filter((b) => b.earned_at).length}/${s.badges.length} earned</span></div>
+      ${badgeSections(s.badges)}</div>`;
   const { grid } = chartDefaults();
   const col = seriesColors();
   makeChart(app.querySelector("#c-style"), {
