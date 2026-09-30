@@ -200,6 +200,9 @@ def list_learners():
     rows = db.q("SELECT * FROM learners ORDER BY id")
     for r in rows:
         r["level"] = gamification.level_for(gamification.total_xp(r["id"]))
+        r["badges_earned"] = db.scalar("SELECT COUNT(*) FROM badges WHERE learner_id=? AND badge_id IN (%s)"
+                                       % ",".join("?" * len(gamification.BADGES)), (r["id"], *gamification.BADGES))
+        r["badges_total"] = len(gamification.BADGES)
     return rows
 
 

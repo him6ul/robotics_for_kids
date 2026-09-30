@@ -60,8 +60,10 @@ export async function viewWelcome(app) {
     <div class="hero"><div class="logo">🤖</div><div><h1 style="margin:0">RoboQuest</h1>
       <div class="muted">Six weeks, twelve robots. Learn robotics by programming a robot to drive, sense, follow lines, grab things and solve mazes.</div></div></div>
     ${learners.length ? `<h3>Who's building today?</h3><div class="learners">${learners.map((l) => `
-      <div class="learner-card" data-id="${l.id}"><div class="av">${l.avatar}</div><div><b>${esc(l.name)}</b>
-      <div class="faint small">Level ${l.level.level} · ${esc(l.level.title)}</div></div></div>`).join("")}</div>` : ""}
+      <div class="learner-card" data-id="${l.id}"><div class="av">${l.avatar}</div><div style="flex:1;min-width:130px"><b>${esc(l.name)}</b>
+      <div class="faint small">Level ${l.level.level} · ${esc(l.level.title)}</div>
+      <div class="row" style="margin-top:6px;gap:6px"><div class="progress" style="flex:1" title="Badges collected"><i style="width:${l.badges_total ? l.badges_earned / l.badges_total * 100 : 0}%"></i></div>
+        <span class="faint small">🏅 ${l.badges_earned}/${l.badges_total}</span></div></div></div>`).join("")}</div>` : ""}
     <div class="card">
       <h2>${learners.length ? "New engineer" : "Set up your robot lab"}</h2>
       <div class="form-grid">
