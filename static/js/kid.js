@@ -558,7 +558,7 @@ function ideaComposer(host, pid, onSaved) {
       const r = await api(`/api/learners/${state.learner.id}/ideas`, { method: "POST", body: { text: ta.value, project: pid } });
       sfx("ok");
       toast(`${esc(r.analysis.level_name)}-level idea saved · +${r.xp} XP`);
-      r.badges.forEach(showBadge);
+      r.badges.forEach((b) => showBadge(b, r.badge_count));
       ta.value = ""; meter.innerHTML = "";
       document.dispatchEvent(new CustomEvent("xp-changed"));
       onSaved && onSaved(r);
@@ -619,7 +619,7 @@ export async function viewRemix(app, pid) {
     sfx("pass"); celebrate(1.2);
     box.innerHTML = `<div class="check-result pass" style="margin:8px 0">✓ ${esc(r.message)}<br><span class="muted">Complexity: original ${r.base_complexity} → yours <b>${r.complexity}</b></span>
       ${r.xp ? `<br><b>+${r.xp} XP</b>` : "<br><span class='muted'>(Make it even bigger to earn more XP.)</span>"}</div>`;
-    r.badges.forEach(showBadge);
+    r.badges.forEach((b) => showBadge(b, r.badge_count));
     document.dispatchEvent(new CustomEvent("xp-changed"));
     await refreshState();
     renderRemixBadges();

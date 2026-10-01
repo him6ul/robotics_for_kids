@@ -358,6 +358,10 @@ def step_lock(lid, project, step):
     return None
 
 
+def _badge_count(lid):
+    return {"earned": db.scalar("SELECT COUNT(*) FROM badges WHERE learner_id=?", (lid,)), "total": len(gamification.BADGES)}
+
+
 def require_open(lid, project, step):
     why = step_lock(lid, project, step)
     if why:
@@ -489,7 +493,8 @@ def save_arena(lid: int, request: Request, body: dict = Body(...)):
     if action == "arena.create" and db.scalar("SELECT COUNT(*) FROM arenas WHERE learner_id=?", (lid,)) <= 5:
         xp = gamification.award_xp(lid, 10 + cx // 10, f"arena:{aid}")
     badges = gamification.evaluate_badges(lid, PROJECTS)
-    return {"id": aid, "ref": f"custom:{aid}", "complexity": cx, "xp": xp, "badges": badges, "spec": spec}
+    return {"id": aid, "ref": f"custom:{aid}", "complexity": cx, "xp": xp, "badges": badges, "spec": spec,
+            "badge_count": _badge_count(lid)}
 
 
 @app.get("/api/learners/{lid}/arenas/{aid}")
@@ -882,7 +887,7 @@ def add_idea(lid: int, request: Request, body: dict = Body(...)):
     xp = gamification.award_xp(lid, 5 + a["level"] * 3, f"idea:{iid}")
     obs.audit(f"learner:{lid}", "idea.add", "idea", iid, {"score": a["score"], "level": a["level"], "project": body.get("project")}, request)
     badges = gamification.evaluate_badges(lid, PROJECTS)
-    return {"id": iid, "analysis": a, "xp": xp, "badges": badges}
+    return {"id": iid, "analysis": a, "xp": xp, "badges": badges, "badge_count": _badge_count(lid)}
 
 
 @app.get("/api/learners/{lid}/ideas")
@@ -924,7 +929,7 @@ expect(r.error is None, f"Your remix crashed with {r.error}: {r.error_msg} — f
               {"complexity": info["complexity"], "base": base_c, "xp": award, "arena": ref}, request)
     badges = gamification.evaluate_badges(lid, PROJECTS)
     return {"accepted": True, "id": rid, "xp": award, "complexity": info["complexity"], "base_complexity": base_c,
-            "concepts": info["concepts"], "badges": badges,
+            "concepts": info["concepts"], "badges": badges, "badge_count": _badge_count(lid),
             "message": "Remix saved! " + ("It's more complex than the original — nice!" if growth > 0 else "Nice twist!")}
 
 

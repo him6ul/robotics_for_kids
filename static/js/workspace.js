@@ -222,7 +222,7 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
           Array.from({ length: res.badge_count.total }, (_, i) => ({ earned_at: i < res.badge_count.earned ? 1 : null })))}
           ${mode === "playground" ? `<p class="faint small" style="margin:0">${res.playground_runs >= 10 ? "🧭 Explorer earned — keep experimenting!"
             : `${res.playground_runs}/10 playground experiments towards 🧭 Explorer.`}</p>` : ""}</div>` : "");
-      (res.badges || []).forEach(showBadge);
+      (res.badges || []).forEach((b) => showBadge(b, res.badge_count));
     } catch (e) {
       toast("Couldn't run: " + esc(e.message));
     } finally {
@@ -312,9 +312,12 @@ export function createWorkspace(host, { project, step, mode = "step", checkable 
   };
 }
 
-export function showBadge(b) {
+// count: {earned, total} after this badge was awarded (shown as a mini progress bar in the toast)
+export function showBadge(b, count) {
   sfx("badge");
-  toast(`${b.emoji} Badge unlocked: <b>${esc(b.name)}</b> <span class="muted">— ${esc(b.desc)}</span>`, 4500);
+  const bar = count?.total ? `<div class="toast-bar"><div class="progress"><i style="width:${count.earned / count.total * 100}%"></i></div>
+    <span>${count.earned}/${count.total} badges</span></div>` : "";
+  toast(`${b.emoji} Badge unlocked: <b>${esc(b.name)}</b> <span class="muted">— ${esc(b.desc)}</span>${bar}`, 4500);
 }
 
 export function rewards(r) {
@@ -324,7 +327,7 @@ export function rewards(r) {
   celebrate(r.project_complete ? 1.6 : 0.8);
   const bonus = (rw.bonuses || []).map((b) => esc(b)).join(" · ");
   toast(`<b>+${rw.xp} XP</b>${bonus ? ` <span class="muted">${bonus}</span>` : ""}`);
-  (rw.badges || []).forEach((b, i) => setTimeout(() => showBadge(b), 600 + i * 700));
+  (rw.badges || []).forEach((b, i) => setTimeout(() => showBadge(b, r.badge_count), 600 + i * 700));
   if (rw.level_up) {
     setTimeout(() => {
       sfx("level");

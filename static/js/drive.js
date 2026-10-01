@@ -114,7 +114,7 @@ export async function viewDrive(app) {
     ws = null;
     sfx(m.new_badges.length ? "badge" : "ok");
     if (m.new_badges.length) celebrate(0.8);
-    m.new_badges.forEach((b, i) => setTimeout(() => showBadge(b), 400 + i * 600));
+    m.new_badges.forEach((b, i) => setTimeout(() => showBadge(b, { earned: m.badges_earned, total: m.badges_total }), 400 + i * 600));
     const d = modal(`<div class="big">🏁</div><h2>Drive complete</h2>
       <dl class="kv" style="max-width:280px;margin:12px auto;text-align:left">
         <dt>Time</dt><dd>${Math.round(m.seconds)} s</dd><dt>Distance</dt><dd>${Math.round(m.distance)} cm</dd>

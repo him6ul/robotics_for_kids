@@ -204,7 +204,7 @@ export async function viewBuilder(app, id) {
     arenaId = r.id;
     toast(`Saved “${esc(r.spec.name)}” · design score ${r.complexity}${r.xp ? ` · +${r.xp} XP` : ""}`);
     if (first) celebrate(0.6);
-    r.badges.forEach(showBadge);
+    r.badges.forEach((b) => showBadge(b, r.badge_count));
     if (first) mine.push({ id: r.id });
     refreshState().then((st) => renderBadges(st.badges));
     uiEvent("builder.test", `arena/${r.id}`);
