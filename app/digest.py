@@ -100,6 +100,14 @@ def _bar_rows(label, got, total, color="#50709e"):
 <td style="padding:4px 0 4px 10px;font-size:13px;font-weight:600;text-align:right;white-space:nowrap">{got}/{total}</td></tr>"""
 
 
+def text_bar(got, total, width=10):
+    """A plain-text progress bar for places that can't show HTML (email subjects): ▰▰▰▱▱▱▱▱▱▱."""
+    filled = 0 if not total else min(width, round(got / total * width))
+    if got and not filled:
+        filled = 1
+    return "▰" * filled + "▱" * (width - filled)
+
+
 def week_key(d=None):
     y, w, _ = (d or dt.date.today()).isocalendar()
     return f"{y}-W{w:02d}"
@@ -123,7 +131,7 @@ def build(learner_id):
     total_steps = sum(p["steps_total"] for p in projects)
     done_steps = sum(p["steps_done"] for p in projects)
     notes = r["guide"]["parent"][:3]
-    subject = f"RoboQuest weekly: {L['name']} — {bp['earned']}/{bp['total']} badges, {s['actual_pct']}% of the quest"
+    subject = f"RoboQuest weekly: {L['name']} — 🏅 {text_bar(bp['earned'], bp['total'])} {bp['earned']}/{bp['total']} badges, {s['actual_pct']}% of the quest"
     kpi = lambda v, l: (f'<td style="padding:10px 12px;background:#f6f6f3;border:1px solid #e2e2dc;border-radius:8px">'
                         f'<div style="font-size:18px;font-weight:700">{v}</div><div style="font-size:12px;color:#6b6f76">{l}</div></td>')
     body = f"""<!doctype html><html><body style="margin:0;background:#f4f4f1;font-family:-apple-system,'Segoe UI',Inter,Arial,sans-serif;color:#22252a">
