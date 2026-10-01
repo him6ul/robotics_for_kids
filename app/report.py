@@ -11,7 +11,8 @@ CSS = """
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 main { max-width: 900px; margin: 0 auto; padding: 32px 24px 48px; }
-h1 { font-size: 1.6rem; margin: 0 0 4px; } h2 { font-size: 1.1rem; margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+.titlebar { font-size: .95rem; font-weight: 600; color: var(--accent); letter-spacing: .02em; white-space: nowrap; margin-left: 8px; } h2 { font-size: 1.1rem; margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .muted { color: var(--muted); } .small { font-size: .85rem; }
 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
 .kpi { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
@@ -54,6 +55,14 @@ def _bar(label, got, total):
     return f'<div class="barrow"><span>{_e(label)}</span><div class="bar"><i style="width:{w}%"></i></div><b>{got}/{total}</b></div>'
 
 
+def text_bar(got, total, width=10):
+    """A plain-text progress bar for places that can't show HTML (email subjects): ▰▰▰▱▱▱▱▱▱▱."""
+    filled = 0 if not total else min(width, round(got / total * width))
+    if got and not filled:
+        filled = 1
+    return "▰" * filled + "▱" * (width - filled)
+
+
 def badge_progress(badges):
     """{"earned", "total", "categories": [{"name", "earned", "total"}]} — shared by the HTML and JSON exports."""
     cats = []
@@ -73,9 +82,9 @@ def render(r):
     pill = {"ahead": "good", "on track": "good", "behind": "warn"}.get(s["status"], "")
     earned = sorted([b for b in r["badges"] if b["earned_at"]], key=lambda b: b["earned_at"])
     out = [f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RoboQuest report — {_e(L['name'])}</title><style>{CSS}</style></head><body>
+<title>RoboQuest report — {_e(L['name'])} — 🏅 {text_bar(bp['earned'], bp['total'])} {bp['earned']}/{bp['total']} badges</title><style>{CSS}</style></head><body>
 <div class="print"><button onclick="window.print()">Print / save as PDF</button></div><main>
-<h1>RoboQuest progress report</h1>
+<h1>RoboQuest progress report <span class="titlebar">🏅 {text_bar(bp['earned'], bp['total'])} {bp['earned']}/{bp['total']}</span></h1>
 <div class="muted">{_e(L['avatar'])} {_e(L['name'])} · robot “{_e(L.get('robot_name', 'Bolt'))}” · plan started {_e(s['start_date'])} ·
 generated {dt.datetime.now():%b %d, %Y %H:%M}</div>
 <div class="kpis">

@@ -14,7 +14,7 @@ from email.utils import formataddr, make_msgid
 
 from . import analytics, db
 from . import observability as obs
-from .report import badge_progress
+from .report import badge_progress, text_bar
 
 DEFAULTS = {"enabled": False, "smtp_host": "", "smtp_port": 587, "security": "starttls", "username": "",
             "password": "", "from_addr": "", "recipients": [], "weekday": 6, "hour": 18}
@@ -98,14 +98,6 @@ def _bar_rows(label, got, total, color="#50709e"):
 <tr>{f'<td width="{fill}%" style="background:{color};height:8px;border-radius:4px 0 0 4px;font-size:0;line-height:0">&nbsp;</td>' if fill else ''}
 <td style="background:#e8e8e3;height:8px;font-size:0;line-height:0">&nbsp;</td></tr></table></td>
 <td style="padding:4px 0 4px 10px;font-size:13px;font-weight:600;text-align:right;white-space:nowrap">{got}/{total}</td></tr>"""
-
-
-def text_bar(got, total, width=10):
-    """A plain-text progress bar for places that can't show HTML (email subjects): ▰▰▰▱▱▱▱▱▱▱."""
-    filled = 0 if not total else min(width, round(got / total * width))
-    if got and not filled:
-        filled = 1
-    return "▰" * filled + "▱" * (width - filled)
 
 
 def week_key(d=None):
