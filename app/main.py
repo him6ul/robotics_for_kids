@@ -1086,7 +1086,11 @@ def parent_report_export(lid: int, fmt: str, request: Request, _=Depends(parent_
     r = analytics.full_report(lid)
     r["badge_progress"] = report.badge_progress(r["badges"])
     obs.audit("parent", "report.export", "learner", lid, {"format": fmt}, request)
-    name = f"roboquest-report-{learner['name'].lower().replace(' ', '-')}-{dt.date.today()}.{fmt}"
+    slug = "".join(ch if ch.isascii() and ch.isalnum() else "-" for ch in learner["name"].lower()).strip("-")
+    slug = "-".join(p for p in slug.split("-") if p) or f"learner-{lid}"
+    bp = r["badge_progress"]
+    # plain ASCII so every browser/OS keeps it intact (the ▰▱ bar lives in the page title instead)
+    name = f"roboquest-report-{slug}-{dt.date.today()}-badges-{bp['earned']}of{bp['total']}.{fmt}"
     if fmt == "json":
         return Response(json.dumps(r, default=str, indent=1), media_type="application/json",
                         headers={"Content-Disposition": f"attachment; filename={name}"})
