@@ -518,7 +518,7 @@ async function settings(body) {
       <p><button class="btn primary" id="save">Save</button></p>
       <h3 style="margin-top:24px">Danger zone</h3><p class="muted">Permanently delete this learner and all of their progress, code and analytics. The audit log keeps a record that it happened.</p>
       <button class="btn danger" id="del">Delete ${esc(l.name)}'s data</button></div>` : ""}
-    <div class="card" id="emailcard"><h3>Weekly email</h3><p class="muted">Loading…</p></div>
+    <div class="card" id="emailcard"><h3>Emails</h3><p class="muted">Loading…</p></div>
     <div class="card"><h3>Parent PIN</h3><p><input type="password" id="np" placeholder="New PIN" inputmode="numeric"> <button class="btn" id="chg">Change PIN</button></p>
       <h3 style="margin-top:20px">Appearance</h3><p><select id="pt"><option value="system">Follow system</option><option value="light">Light</option><option value="dark">Dark</option></select>
         <label style="margin-left:10px"><input type="checkbox" id="cel"> Confetti on success</label></p>
@@ -611,7 +611,7 @@ async function replayModal(snap) {
 async function emailCard(host) {
   const e = await api("/api/parent/email");
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  host.innerHTML = `<h3>Weekly email</h3>
+  host.innerHTML = `<h3>Emails</h3><h3 style="margin-top:10px;font-size:.95rem">Weekly progress email</h3>
     <p class="muted" style="margin-top:0">A progress email each week per learner, with the badge progress bar, this week's time, missions and
       side quests, quest progress and coaching notes. It's sent through your own email account (SMTP) while RoboQuest is running.
       For Gmail use <code>smtp.gmail.com</code>, port 587, STARTTLS and an <i>app password</i>.</p>
@@ -632,7 +632,22 @@ async function emailCard(host) {
       <button class="btn" id="em-test" ${e.configured ? "" : "disabled"}>Send test now</button>
       <span class="faint small">${e.next_send ? `Next send: ${esc(e.next_send.replace("T", " "))}` : "Automatic sending is off."}</span></div>
     <p id="em-out" class="small"></p>
-    ${e.last.length ? `<div class="tscroll" style="max-height:200px"><table class="t"><thead><tr><th>When</th><th>Week</th><th>Kind</th><th>Status</th></tr></thead>
+    <h3 style="margin-top:22px">Daily activity email</h3>
+    <p class="muted" style="margin-top:0">On every day a learner uses RoboQuest, one email with his name and that day's progress
+      (time, missions, side quests, bosses, remixes, badges, runs and tests). Days with no activity send nothing. Uses the SMTP account above.</p>
+    <div class="form-grid" style="grid-template-columns:130px 1fr">
+      <label>Send to</label><div><textarea id="dm-to" rows="2" placeholder="one or more addresses, separated by commas">${esc(e.daily_recipients.join(", "))}</textarea>
+        <div class="faint small">Separate several addresses with commas (up to 10).</div></div>
+      <label>Send at</label><select id="dm-hour">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === e.daily_hour ? "selected" : ""}>${String(h).padStart(2, "0")}:00</option>`).join("")}</select>
+      <label>Enabled</label><label><input type="checkbox" id="dm-on" ${e.daily_enabled ? "checked" : ""}> Send the daily activity email</label>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn primary" id="dm-save">Save</button>
+      <a class="btn" href="/api/parent/email/daily/preview/${sel}" target="_blank" rel="noopener">Preview today</a>
+      <button class="btn" id="dm-test" ${e.daily_configured ? "" : "disabled"}>Send test now</button>
+      <span class="faint small">${!e.smtp_ready ? "⚠️ Fill in the SMTP server above first — nothing can be sent until then."
+        : e.next_daily ? `Next check: ${esc(e.next_daily.replace("T", " "))} (only if there was activity)` : "Daily email is off."}</span></div>
+    <p id="dm-out" class="small"></p>
+    ${e.last.length ? `<div class="tscroll" style="max-height:200px"><table class="t"><thead><tr><th>When</th><th>Week / day</th><th>Kind</th><th>Status</th></tr></thead>
       <tbody>${e.last.map((x) => `<tr><td>${fmtTime(x.ts)}</td><td>${esc(x.week)}</td><td>${esc(x.kind)}</td>
       <td>${x.status === "sent" ? `<span class="pill good">sent</span>` : `<span class="pill bad" title="${esc(x.error || "")}">failed</span> <span class="faint small">${esc(x.error || "")}</span>`}</td></tr>`).join("")}</tbody></table></div>` : ""}`;
   const $ = (id) => host.querySelector(id);
@@ -645,6 +660,20 @@ async function emailCard(host) {
       toast("Email settings saved");
       emailCard(host);
     } catch (err) { toast(esc(err.message)); }
+  };
+  $("#dm-save").onclick = async () => {
+    try {
+      const r = await api("/api/parent/email", { method: "POST", body: { daily_recipients: $("#dm-to").value,
+        daily_hour: +$("#dm-hour").value, daily_enabled: $("#dm-on").checked } });
+      toast(`Daily email: ${r.daily_recipients.length ? esc(r.daily_recipients.join(", ")) : "no valid addresses"}`);
+      emailCard(host);
+    } catch (err) { toast(esc(err.message)); }
+  };
+  $("#dm-test").onclick = async () => {
+    $("#dm-out").textContent = "Sending…";
+    const r = await api(`/api/parent/email/daily/test/${sel}`, { method: "POST" });
+    $("#dm-out").innerHTML = r.ok ? `✅ Sent “${esc(r.subject)}” to ${esc(r.recipients.join(", "))}.` : `❌ ${esc(r.error)}`;
+    if (r.ok) setTimeout(() => emailCard(host), 800);
   };
   $("#em-test").onclick = async () => {
     $("#em-out").textContent = "Sending…";

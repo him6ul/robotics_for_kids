@@ -1121,6 +1121,25 @@ def parent_email_preview(lid: int, _=Depends(parent_required)):
     return Response(d["html"], media_type="text/html")
 
 
+@app.get("/api/parent/email/daily/preview/{lid}")
+def parent_daily_preview(lid: int, day: str = None, _=Depends(parent_required)):
+    _learner(lid)
+    try:
+        d = dt.date.fromisoformat(day) if day else dt.date.today()
+    except ValueError:
+        raise HTTPException(400, "day must be YYYY-MM-DD")
+    return Response(digest.build_daily(lid, d)["html"], media_type="text/html")
+
+
+@app.post("/api/parent/email/daily/test/{lid}")
+async def parent_daily_test(lid: int, request: Request, _=Depends(parent_required)):
+    _learner(lid)
+    try:
+        return await asyncio.to_thread(digest.send_daily, lid, None, "daily_test", "parent", request)
+    except digest.EmailError as e:
+        return {"ok": False, "error": str(e)}
+
+
 @app.post("/api/parent/email/test/{lid}")
 async def parent_email_test(lid: int, request: Request, _=Depends(parent_required)):
     _learner(lid)

@@ -206,6 +206,18 @@ The **adaptive guide** turns all of this into next steps:
 
   The SMTP password is kept in the local database. It's never shown back in the UI and is masked in the table
   browser, but a full `.db` backup includes it.
+- **Daily activity email.** On every day a learner actually uses RoboQuest (at least a minute of active time, a run
+  or a test), one email per learner goes to the daily recipients. It has his name and the day's progress:
+  - active minutes and XP
+  - missions, bosses, side quests and remixes finished, by name
+  - new badges
+  - runs, bumps and tests passed, hints and distance driven
+  - overall mission and badge bars, and what's up next
+
+  Recipients default to **him6ul@gmail.com**. Change or add more (comma-separated, up to 10) in Parent Zone →
+  Settings → Daily activity email. It's sent at the chosen hour (default 20:00). If RoboQuest was off then, it catches
+  up at the next start, up to 2 days back. Days without activity send nothing. It uses the same SMTP account as the
+  weekly email, so set that up first. There's **Preview today** and **Send test now**.
 - **Data.**
   - a catalog of every table (what it holds, row counts, first and last timestamps)
   - a table browser, CSV/JSON export, and a full `.db` backup
