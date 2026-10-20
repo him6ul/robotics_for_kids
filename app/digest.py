@@ -346,16 +346,22 @@ def build_daily(learner_id, day=None):
 <tr><td style="padding:4px 24px">
   <div style="font-size:15px;font-weight:700;margin-bottom:2px">Today's progress</div>
   {items("Missions passed", act["missions"])}{items("Bosses beaten 👾", act["bosses"])}{items("Side quests", act["side_quests"])}
-  {items("Remixes built 🎛️", act["remixes"])}{items("New badges", act["badges"])}
+  {items("Remixes built 🎛️", act["remixes"])}
   {'' if done_today else '<div style="font-size:13px;color:#555">No missions finished today — he was experimenting and practising.</div>'}
   <div style="font-size:13px;color:#555;margin-top:10px">{act['runs']} robot runs ({act['crashes']} bumps, {act['errors']} with a code error) ·
     {act['tests_passed']}/{act['tests']} tests passed · {act['hints']} hints · {act['distance_m']} m driven
     {f"· {act['drive_minutes']} min in Drive mode" if act['drive_minutes'] else ""}{f" · {act['ideas']} new ideas" if act['ideas'] else ""}</div>
 </td></tr>
+<tr><td style="padding:14px 24px 6px"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Badges collected</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+  {_bar_rows("All badges", bp["earned"], bp["total"])}
+  {''.join(_bar_rows(c["name"], c["earned"], c["total"], "#7f99bd") for c in bp["categories"])}
+  </table>
+  <div style="font-size:13px;color:#444;margin-top:8px">{('New today: ' + ', '.join(_e(b) for b in act['badges'])) if act['badges'] else 'No new badges today.'}</div>
+</td></tr>
 <tr><td style="padding:14px 24px 6px"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Overall</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
   {_bar_rows("Missions", done_steps, total_steps)}
-  {_bar_rows("Badges", bp["earned"], bp["total"], "#7f99bd")}
   </table>
   <div style="font-size:13px;color:#444;margin-top:8px">Up next: <b>{_e(nxt)}</b></div>
 </td></tr>
@@ -364,14 +370,16 @@ def build_daily(learner_id, day=None):
 </table></td></tr></table></body></html>"""
     text = "\n".join(x for x in [
         f"RoboQuest daily activity — {L['name']} — {day_label}",
-        f"Active {act['minutes']} min · {len(act['missions']) + len(act['bosses'])} missions · {len(act['side_quests'])} side quests · +{act['xp']} XP · {streak}-day streak",
+        f"Active {act['minutes']} min · {n_m} mission{'' if n_m == 1 else 's'} · {len(act['side_quests'])} side quest{'' if len(act['side_quests']) == 1 else 's'} · +{act['xp']} XP · {streak}-day streak",
         *(["Missions: " + "; ".join(act["missions"])] if act["missions"] else []),
         *(["Bosses: " + "; ".join(act["bosses"])] if act["bosses"] else []),
         *(["Side quests: " + "; ".join(act["side_quests"])] if act["side_quests"] else []),
         *(["Remixes: " + "; ".join(act["remixes"])] if act["remixes"] else []),
-        *(["New badges: " + ", ".join(act["badges"])] if act["badges"] else []),
+        f"Badges collected: {text_bar(bp['earned'], bp['total'])} {bp['earned']}/{bp['total']} ("
+        + ", ".join(f"{c['name']} {c['earned']}/{c['total']}" for c in bp["categories"]) + ")",
+        f"New badges today: {', '.join(act['badges']) or 'none'}",
         f"{act['runs']} robot runs ({act['crashes']} bumps) · {act['tests_passed']}/{act['tests']} tests passed · {act['hints']} hints",
-        f"Overall: missions {done_steps}/{total_steps} · badges {bp['earned']}/{bp['total']} {text_bar(bp['earned'], bp['total'])}",
+        f"Overall: missions {done_steps}/{total_steps}",
         f"Up next: {nxt}",
     ])
     return {"subject": subject, "html": body, "text": text, "activity": act, "had_activity": bool(had_activity(act))}
